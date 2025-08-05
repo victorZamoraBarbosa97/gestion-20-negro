@@ -119,5 +119,3 @@ Este proyecto está configurado para un despliegue sencillo en **Firebase Hostin
     ```
 
 ---
-
-*Este README fue generado y actualizado por el asistente de IA para reflejar el estado actual del proyecto.*
