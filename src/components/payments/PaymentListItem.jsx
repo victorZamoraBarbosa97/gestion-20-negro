@@ -1,6 +1,6 @@
 // src/components/payments/PaymentListItem.jsx
 import React from "react";
-import { ChevronRightIcon } from "../ui/icons";
+import { ChevronRightIcon } from "../ui/Icons";
 
 const PaymentListItem = ({ payment, onClick }) => {
   return (
