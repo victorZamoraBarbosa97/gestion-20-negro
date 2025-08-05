@@ -6,9 +6,10 @@ import {
   deletePayment,
   downloadReceipt as serviceDownloadReceipt,
   updatePaymentDate as serviceUpdatePaymentDate,
-} from "../services/firestoreService"; // Asegúrate de que esta ruta sea correcta e importa updatePaymentDate
-import { AuthContext } from "../context/AuthContext"; // Asume que AuthContext está en esta ruta
-import { getWeekNumber } from "../utils/dateHelpers"; // Importa el helper de fecha
+} from "../services/firestoreService";
+import { AuthContext } from "../context/AuthContext";
+import { getWeekNumber } from "../utils/dateHelpers";
+import toast from 'react-hot-toast'; // 1. Importar toast
 
 const usePayments = (currentWeekStartDate) => {
   const { currentUser } = useContext(AuthContext);
@@ -51,45 +52,59 @@ const usePayments = (currentWeekStartDate) => {
   );
 
   const handleAddPayment = async ({ amount, receiptFile, type }) => {
-    if (!currentUser) throw new Error("Usuario no autenticado.");
-    await addPayment({
-      amount,
-      receiptFile,
-      creatorUid: currentUser.uid,
-      type,
-    });
+    if (!currentUser) {
+      toast.error("Debes iniciar sesión para añadir un pago.");
+      return;
+    }
+    // Usar toast.promise para manejar estados de carga, éxito y error
+    await toast.promise(
+      addPayment({
+        amount,
+        receiptFile,
+        creatorUid: currentUser.uid,
+        type,
+      }),
+      {
+        loading: 'Añadiendo pago...',
+        success: <b>Pago añadido con éxito</b>,
+        error: <b>No se pudo añadir el pago.</b>,
+      }
+    );
   };
 
   const handleDeletePayment = async (paymentId, storagePath) => {
     if (window.confirm(`¿Seguro que quieres eliminar el pago?`)) {
-      try {
-        await deletePayment(paymentId, storagePath);
-        // La lista se actualizará automáticamente gracias al listener de Firestore
-      } catch (error) {
-        console.error("Error al eliminar el pago:", error);
-        alert("No se pudo eliminar el pago.");
-      }
+      await toast.promise(
+        deletePayment(paymentId, storagePath),
+        {
+          loading: 'Eliminando pago...',
+          success: <b>Pago eliminado</b>,
+          error: <b>Error al eliminar el pago.</b>,
+        }
+      );
     }
   };
 
   const handleDownloadReceipt = async (receiptUrl, storagePath) => {
-    try {
-      await serviceDownloadReceipt(receiptUrl, storagePath);
-    } catch (error) {
-      console.error("Error al descargar el comprobante:", error);
-      alert("No se pudo descargar el comprobante.");
-    }
+    await toast.promise(
+      serviceDownloadReceipt(receiptUrl, storagePath),
+      {
+        loading: 'Descargando...',
+        success: <b>Descarga iniciada.</b>,
+        error: <b>No se pudo descargar el comprobante.</b>,
+      }
+    );
   };
 
   const handleUpdatePaymentDate = async (paymentId, newDate) => {
-    try {
-      await serviceUpdatePaymentDate(paymentId, newDate);
-      // La UI se actualizará automáticamente si getPaymentsForWeek está usando onSnapshot
-    } catch (error) {
-      console.error("Error al actualizar la fecha del pago en el hook:", error);
-      alert("Error al actualizar la fecha del pago.");
-      throw error; // Propagar el error si es necesario
-    }
+    await toast.promise(
+      serviceUpdatePaymentDate(paymentId, newDate),
+      {
+        loading: 'Actualizando fecha...',
+        success: <b>Fecha actualizada correctamente</b>,
+        error: <b>Error al actualizar la fecha.</b>,
+      }
+    );
   };
 
   return {
@@ -103,7 +118,7 @@ const usePayments = (currentWeekStartDate) => {
     handleAddPayment,
     handleDeletePayment,
     handleDownloadReceipt,
-    handleUpdatePaymentDate, // Exporta la nueva función
+    handleUpdatePaymentDate,
   };
 };
 
