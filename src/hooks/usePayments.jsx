@@ -1,34 +1,43 @@
 // src/hooks/usePayments.js
 import { useState, useEffect, useMemo, useContext } from "react";
 import {
-  getPaymentsForWeek,
+  getPaymentsForDateRange, // Cambiado de getPaymentsForWeek
   addPayment,
   deletePayment,
   downloadReceipt as serviceDownloadReceipt,
   updatePaymentDate as serviceUpdatePaymentDate,
 } from "../services/firestoreService";
 import { AuthContext } from "../context/AuthContext";
-import { getWeekNumber } from "../utils/dateHelpers";
-import toast from 'react-hot-toast'; // 1. Importar toast
+import toast from 'react-hot-toast';
 
-const usePayments = (currentWeekStartDate) => {
+// El hook ahora acepta un rango de fechas explícito
+const usePayments = (startDate, endDate) => {
   const { currentUser } = useContext(AuthContext);
   const [payments, setPayments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Si no se proveen las fechas, no hacer nada.
+    if (!startDate || !endDate) {
+      setPayments([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
 
-    const unsubscribe = getPaymentsForWeek(
-      currentWeekStartDate,
+    const unsubscribe = getPaymentsForDateRange( // Usando la nueva función
+      startDate,
+      endDate,
       (fetchedPayments) => {
         setPayments(fetchedPayments);
         setIsLoading(false);
       }
     );
     return () => unsubscribe();
-  }, [currentWeekStartDate]);
+  }, [startDate, endDate]); // El efecto ahora depende del rango de fechas
 
+  // El resto de la lógica de cálculo sigue siendo válida
   const pronosticosPayments = useMemo(
     () => payments.filter((p) => p.type === "PRONOSTICOS"),
     [payments]
@@ -46,17 +55,13 @@ const usePayments = (currentWeekStartDate) => {
     () => viaPayments.reduce((sum, mov) => sum + mov.amount, 0),
     [viaPayments]
   );
-  const weekNumber = useMemo(
-    () => getWeekNumber(currentWeekStartDate),
-    [currentWeekStartDate]
-  );
-
+  
+  // Las funciones de acción no necesitan cambios
   const handleAddPayment = async ({ amount, receiptFile, type }) => {
     if (!currentUser) {
       toast.error("Debes iniciar sesión para añadir un pago.");
       return;
     }
-    // Usar toast.promise para manejar estados de carga, éxito y error
     await toast.promise(
       addPayment({
         amount,
@@ -114,7 +119,6 @@ const usePayments = (currentWeekStartDate) => {
     viaPayments,
     pronosticosTotal,
     viaTotal,
-    weekNumber,
     handleAddPayment,
     handleDeletePayment,
     handleDownloadReceipt,

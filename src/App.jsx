@@ -4,7 +4,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
-import { Toaster } from "react-hot-toast"; // 1. Importar
+import ReportsPage from "./pages/ReportsPage";
+import AppLayout from "./components/layout/AppLayout"; // CORREGIDO: Importar como AppLayout
+import { Toaster } from "react-hot-toast";
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
@@ -17,7 +19,7 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen w-full bg-slate-900">
+      <div className="flex items-center justify-center min-h-screen w-full bg-gray-900">
         <span className="loader"></span>
       </div>
     );
@@ -25,18 +27,15 @@ function App() {
 
   return (
     <BrowserRouter>
-      {/* 2. Añadir el componente Toaster aquí */}
       <Toaster 
         position="top-right"
         toastOptions={{
-          // Define default options
           className: '',
           duration: 5000,
           style: {
             background: '#363636',
             color: '#fff',
           },
-          // Default options for specific types
           success: {
             duration: 3000,
             theme: {
@@ -49,17 +48,37 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={currentUser ? <Navigate to="/dashboard" /> : <LoginPage />}
+          element={currentUser ? <Navigate to="/" /> : <LoginPage />}
         />
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <AppLayout> {/* Usar AppLayout */}
+                <DashboardPage />
+              </AppLayout>
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <AppLayout> {/* Usar AppLayout */}
+                <ReportsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/dashboard" />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

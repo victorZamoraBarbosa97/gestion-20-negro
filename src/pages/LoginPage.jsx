@@ -1,12 +1,8 @@
 // src/pages/LoginPage.jsx
-import { useState } from "react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../firebase/config"; // Importamos la configuración de auth directamente.
-import { AuthContext } from "../context/AuthContext"; // Todavía lo necesitamos para el login de invitado
 import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
-
-// --- UI Components ---
+// --- UI Components (sin cambios) ---
 const Logo = () => (
   <img src="/logo.svg" alt="Logo 20 Negro" className="w-24 h-24 mx-auto mb-6" />
 );
@@ -34,35 +30,12 @@ const GuestLoginButton = ({ onClick, isLoading }) => (
 
 
 const LoginPage = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { loginAsGuest, loading: guestLoading } = useContext(AuthContext);
+  // Se obtiene la función 'login' y el estado 'loading' del AuthContext.
+  // 'loading' ahora representa el estado de carga general de la autenticación.
+  const { login, loginAsGuest, loading } = useContext(AuthContext);
 
-  const handleGoogleLoginDebug = async () => {
-    setIsLoading(true);
-    alert("Paso 1: Iniciando handleGoogleLoginDebug");
-    console.log("Paso 1: Iniciando handleGoogleLoginDebug");
-
-    try {
-      const provider = new GoogleAuthProvider();
-      console.log("Paso 2: Proveedor de Google creado.");
-      alert("Paso 2: Proveedor de Google creado. Abriendo popup...");
-
-      const result = await signInWithPopup(auth, provider);
-      
-      console.log("Paso 3: ¡ÉXITO! signInWithPopup completado.");
-      alert(`Paso 3: ¡ÉXITO! Usuario: ${result.user.displayName}`);
-      console.log("Resultado completo:", result);
-      console.log("Usuario:", result.user);
-
-    } catch (error) {
-      console.error("Paso 3: ¡ERROR! Ocurrió un problema en signInWithPopup.", error);
-      alert(`Paso 3: ¡ERROR! Código: ${error.code}\nMensaje: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-      console.log("Paso 4: Fin del proceso de login.");
-      alert("Paso 4: Fin del proceso de login.");
-    }
-  };
+  // Ya no se necesita el estado local 'isLoading' ni la función 'handleGoogleLoginDebug'.
+  // La lógica de inicio de sesión está centralizada en AuthContext.
 
   return (
     <main className="flex items-center justify-center min-h-screen w-full bg-black p-4">
@@ -79,8 +52,10 @@ const LoginPage = () => {
             <p className="mt-2 text-gray-400">Control de Pagos Semanales</p>
           </div>
           <div className="pt-4 space-y-4">
-            <GoogleLoginButton onClick={handleGoogleLoginDebug} isLoading={isLoading} />
-            <GuestLoginButton onClick={loginAsGuest} isLoading={guestLoading} />
+            {/* El botón de Google ahora llama a la función 'login' del contexto */}
+            {/* El estado de 'disabled' se controla con 'loading' del contexto */}
+            <GoogleLoginButton onClick={login} isLoading={loading} />
+            <GuestLoginButton onClick={loginAsGuest} isLoading={loading} />
           </div>
         </div>
       </div>

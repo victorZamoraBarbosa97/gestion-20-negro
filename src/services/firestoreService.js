@@ -26,17 +26,18 @@ const storage = getStorage();
 const paymentsCollectionRef = collection(db, "payments");
 
 /**
- * Escucha en tiempo real los pagos de una semana específica.
- * @param {Date} startDate - El inicio de la semana.
+ * Escucha en tiempo real los pagos dentro de un rango de fechas.
+ * @param {Date} startDate - El inicio del rango.
+ * @param {Date} endDate - El fin del rango.
  * @param {Function} callback - Función para actualizar el estado con los nuevos datos.
  * @returns {Function} - Función para cancelar la suscripción al listener.
  */
-// Ejemplo (verifica tu implementación real en firestoreService.js)
-export const getPaymentsForWeek = (startDate, callback) => {
-  const endDate = new Date(startDate);
-  endDate.setDate(startDate.getDate() + 6); // <-- Esto es crucial: 6 días más desde el Lunes para incluir el Domingo
-  endDate.setHours(23, 59, 59, 999); // <-- Asegura que sea hasta el final del Domingo
-
+export const getPaymentsForDateRange = (startDate, endDate, callback) => {
+  if (!startDate || !endDate) {
+    // Devuelve un listener vacío si no hay fechas, para evitar errores.
+    return () => {};
+  }
+  
   const q = query(
     collection(db, "payments"),
     where("date", ">=", startDate),
@@ -53,6 +54,7 @@ export const getPaymentsForWeek = (startDate, callback) => {
     callback(payments);
   });
 };
+
 
 /**
  * Añade un nuevo pago a Firestore y sube el comprobante a Storage.

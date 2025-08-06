@@ -1,34 +1,30 @@
 // src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useCallback, useContext } from "react";
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInAnonymously } from "firebase/auth";
+import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult, setPersistence, browserSessionPersistence, signInAnonymously } from "firebase/auth";
 import { auth, db } from "../firebase/config";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import toast from "react-hot-toast";
 
 export const AuthContext = createContext();
-
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  // 'loading' representa la verificación inicial del estado de autenticación al cargar la app.
   const [loading, setLoading] = useState(true);
 
   const login = useCallback(async () => {
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-      // onAuthStateChanged se encargará del resto.
+      await setPersistence(auth, browserSessionPersistence);
+      await signInWithRedirect(auth, new GoogleAuthProvider());
     } catch (error) {
-      // Evitar mostrar error si el usuario simplemente cierra el popup.
-      if (error.code !== 'auth/popup-closed-by-user') {
-        toast.error("Error al iniciar sesión con Google.");
-        console.error("Error en signInWithPopup:", error);
-      }
+      toast.error("Error al configurar o iniciar el inicio de sesión.");
+      console.error("Error en el proceso de login:", error);
     }
   }, []);
-
+  
   const loginAsGuest = useCallback(async () => {
     try {
+      await setPersistence(auth, browserSessionPersistence);
       await signInAnonymously(auth);
       toast.success("Has iniciado sesión como invitado.");
     } catch (error) {
@@ -48,55 +44,66 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        if (user.isAnonymous) {
-          setCurrentUser({ ...user, displayName: 'Invitado' });
-        } else {
-          try {
-            const allowlistRef = doc(db, "allowlist", user.email);
-            const allowlistSnap = await getDoc(allowlistRef);
+    let unsubscribe = () => {}; // Placeholder para la función de limpieza.
 
-            if (allowlistSnap.exists()) {
-              const userRef = doc(db, "usuarios", user.uid);
-              await setDoc(userRef, {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                lastLogin: serverTimestamp(),
-                role: allowlistSnap.data().role || "user",
-              }, { merge: true });
-              setCurrentUser(user);
-            } else {
-              // CORRECCIÓN: Se utiliza el template literal (`) correctamente.
-              toast.error(`Acceso denegado. ${user.email} no está autorizado.`);
-              await signOut(auth); // Esto disparará onAuthStateChanged de nuevo con user=null.
-            }
-          } catch (error) {
-            console.error("Error en la verificación de permisos:", error);
-            toast.error("Error al verificar permisos.");
-            await signOut(auth);
-          }
-        }
-      } else {
-        setCurrentUser(null);
+    const checkAuthStatus = async () => {
+      try {
+        // 1. PRIMERO: Esperamos a que se procese cualquier resultado de redirección.
+        // Esto pausa la ejecución hasta que Firebase haya procesado internamente el token de inicio de sesión.
+        await getRedirectResult(auth);
+      } catch (error) {
+        // Capturamos cualquier error que ocurriera en la página de Google.
+        console.error("Error durante el procesamiento de la redirección:", error);
+        toast.error("Fallo en el inicio de sesión. Por favor, intenta de nuevo.");
       }
-      // Cuando la verificación termina (haya usuario o no), finaliza el estado de carga inicial.
-      setLoading(false);
-    });
-    
-    // Se retorna la función de limpieza para desuscribirse al desmontar el componente.
-    return () => unsubscribe();
-  }, []); // El array vacío asegura que este efecto se ejecute solo una vez.
+      
+      // 2. SEGUNDO: Configuramos el listener.
+      // Ahora que la redirección está procesada, onAuthStateChanged tendrá el estado de usuario definitivo y correcto.
+      unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          if (user.isAnonymous) {
+            setCurrentUser({ ...user, displayName: 'Invitado' });
+          } else {
+            try {
+              const allowlistRef = doc(db, "allowlist", user.email);
+              const allowlistSnap = await getDoc(allowlistRef);
 
-  const value = {
-    currentUser,
-    loading,
-    login,
-    logout,
-    loginAsGuest, 
-  };
+              if (allowlistSnap.exists()) {
+                const userRef = doc(db, "usuarios", user.uid);
+                await setDoc(userRef, {
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: user.displayName,
+                  photoURL: user.photoURL,
+                  lastLogin: serverTimestamp(),
+                  role: allowlistSnap.data().role || "user",
+                }, { merge: true });
+                setCurrentUser(user);
+              } else {
+                toast.error(`Acceso denegado: ${user.email} no autorizado.`);
+                await signOut(auth);
+              }
+            } catch (error) {
+              console.error("Error en la verificación de permisos:", error);
+              toast.error("Error al verificar permisos.");
+              await signOut(auth);
+            }
+          }
+        } else {
+          setCurrentUser(null);
+        }
+        // 3. TERCERO: Dejamos de cargar SOLO cuando tenemos el estado final.
+        setLoading(false);
+      });
+    };
+
+    checkAuthStatus();
+
+    // La función de limpieza que devuelve useEffect se encargará de desuscribirse.
+    return () => unsubscribe();
+  }, []);
+
+  const value = { currentUser, loading, login, logout, loginAsGuest };
 
   return (
     <AuthContext.Provider value={value}>

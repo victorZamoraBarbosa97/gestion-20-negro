@@ -1,34 +1,33 @@
 // src/pages/DashboardPage.jsx
-import { useState } from "react";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/config";
-import { AuthContext } from "../context/AuthContext";
+import { useState, useMemo } from "react";
+import { getStartOfWeek } from "../utils/dateHelpers";
+import usePayments from "../hooks/usePayments";
 
-// Importa los componentes y hooks refactorizados
-import Header from "../components/navigation/Header";
+// Importa los componentes (Header ya no es necesario aquí)
 import WeekNavigator from "../components/navigation/WeekNavigator";
 import PaymentList from "../components/payments/PaymentList";
 import AddPaymentModal from "../components/payments/AddPaymentModal";
 import PaymentDetailModal from "../components/payments/PaymentDetailModal";
-import ChangePaymentDateModal from "../components/payments/ChangePaymentDateModal"; // Importa el nuevo modal
-
-// Importa los helpers de fecha para el estado inicial
-import { getStartOfWeek } from "../utils/dateHelpers";
-
-// Importa el custom hook
-import usePayments from "../hooks/usePayments";
+import ChangePaymentDateModal from "../components/payments/ChangePaymentDateModal";
 
 const DashboardPage = () => {
   const [currentWeekStartDate, setCurrentWeekStartDate] = useState(
     getStartOfWeek(new Date())
   );
+  
+  const currentWeekEndDate = useMemo(() => {
+    const endDate = new Date(currentWeekStartDate);
+    endDate.setDate(endDate.getDate() + 6);
+    endDate.setHours(23, 59, 59, 999);
+    return endDate;
+  }, [currentWeekStartDate]);
+  
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isChangeDateModalOpen, setIsChangeDateModalOpen] = useState(false); // Nuevo estado para el modal de cambio de fecha
-  const [paymentToChangeDate, setPaymentToChangeDate] = useState(null); // Estado para el pago a cambiar de fecha
+  const [isChangeDateModalOpen, setIsChangeDateModalOpen] = useState(false);
+  const [paymentToChangeDate, setPaymentToChangeDate] = useState(null);
   const [paymentTypeToAdd, setPaymentTypeToAdd] = useState("PRONOSTICOS");
 
-  // Usar el custom hook para la lógica de pagos
   const {
     isLoading,
     pronosticosPayments,
@@ -38,10 +37,9 @@ const DashboardPage = () => {
     handleAddPayment,
     handleDeletePayment,
     handleDownloadReceipt,
-    handleUpdatePaymentDate, // Importa la nueva función del hook
-  } = usePayments(currentWeekStartDate);
+    handleUpdatePaymentDate,
+  } = usePayments(currentWeekStartDate, currentWeekEndDate);
 
-  const handleLogout = () => signOut(auth);
   const handlePrevWeek = () =>
     setCurrentWeekStartDate(
       (prev) => new Date(new Date(prev).setDate(prev.getDate() - 7))
@@ -57,57 +55,35 @@ const DashboardPage = () => {
   };
 
   const handleDeletePaymentClick = async (payment) => {
-    if (
-      window.confirm(
-        `¿Seguro que quieres eliminar el pago de ${payment.amount.toLocaleString(
-          "es-MX",
-          { style: "currency", currency: "MXN" }
-        )}?`
-      )
-    ) {
-      try {
-        await handleDeletePayment(payment.id, payment.storagePath);
-        setSelectedPayment(null); // Cierra el modal de detalle después de eliminar
-      } catch (error) {
-        console.error("Error al eliminar el pago desde Dashboard:", error);
-        alert("No se pudo eliminar el pago.");
-      }
-    }
+    await handleDeletePayment(payment.id, payment.storagePath);
+    setSelectedPayment(null);
   };
-
-  // Función para abrir el modal de cambio de fecha
+  
   const handleOpenChangeDateModal = (payment) => {
-    setSelectedPayment(null); // Cierra el modal de detalle primero
+    setSelectedPayment(null);
     setPaymentToChangeDate(payment);
     setIsChangeDateModalOpen(true);
   };
 
-  // Función para manejar la actualización de fecha desde el modal
   const handleUpdateDate = async (paymentId, newDate) => {
-    try {
-      await handleUpdatePaymentDate(paymentId, newDate);
-      // Opcional: Si la nueva fecha cae en una semana diferente, podrías querer navegar a esa semana.
-      // Pero dado que getPaymentsForWeek ya tiene un listener, se actualizará automáticamente.
-    } catch (error) {
-      console.log("🚀 ~ handleUpdateDate ~ error:", error);
-    } finally {
-      setIsChangeDateModalOpen(false); // Cerrar el modal después de la actualización
-      setPaymentToChangeDate(null);
-    }
+    await handleUpdatePaymentDate(paymentId, newDate);
+    setIsChangeDateModalOpen(false);
+    setPaymentToChangeDate(null);
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans">
-      <Header onLogout={handleLogout} />
+    // El div principal ya no necesita min-h-screen o bg-slate-100/font-sans, lo manejará AppLayout
+    <div>
+      {/* El Header ya no se renderiza aquí directamente */}
 
-      <main className="max-w-7xl mx-auto p-4 md:p-6">
+      <main className="max-w-7xl mx-auto p-4 md:p-6 pt-20"> {/* Añadido pt-20 para espacio con Header */}
         <WeekNavigator
           currentWeekStartDate={currentWeekStartDate}
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
           {/* Columna de Pronósticos */}
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
             <div className="flex justify-between items-start">
@@ -183,7 +159,7 @@ const DashboardPage = () => {
         onClose={() => setSelectedPayment(null)}
         onDeletePayment={handleDeletePaymentClick}
         onDownloadReceipt={handleDownloadReceipt}
-        onChangeDateClick={handleOpenChangeDateModal} // Pasa la nueva función
+        onChangeDateClick={handleOpenChangeDateModal}
       />
 
       <ChangePaymentDateModal
