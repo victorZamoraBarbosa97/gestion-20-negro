@@ -5,7 +5,7 @@ import { AuthContext } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ReportsPage from "./pages/ReportsPage";
-import AppLayout from "./components/layout/AppLayout"; // CORREGIDO: Importar como AppLayout
+import AppLayout from "./components/layout/AppLayout";
 import { Toaster } from "react-hot-toast";
 
 // Componente para proteger rutas
@@ -27,20 +27,20 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster 
+      <Toaster
         position="top-right"
         toastOptions={{
-          className: '',
+          className: "",
           duration: 5000,
           style: {
-            background: '#363636',
-            color: '#fff',
+            background: "#363636",
+            color: "#fff",
           },
           success: {
             duration: 3000,
             theme: {
-              primary: 'green',
-              secondary: 'black',
+              primary: "green",
+              secondary: "black",
             },
           },
         }}
@@ -54,7 +54,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <AppLayout> {/* Usar AppLayout */}
+              <AppLayout>
                 <DashboardPage />
               </AppLayout>
             </ProtectedRoute>
@@ -64,7 +64,7 @@ function App() {
           path="/reports"
           element={
             <ProtectedRoute>
-              <AppLayout> {/* Usar AppLayout */}
+              <AppLayout>
                 <ReportsPage />
               </AppLayout>
             </ProtectedRoute>

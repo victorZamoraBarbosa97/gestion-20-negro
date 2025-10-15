@@ -1,19 +1,13 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// This will be populated by the init.js script in Firebase Hosting environments
-const firebaseConfig = window.firebaseConfig;
-
 let app;
 
-// Check if the firebaseConfig object is available (from init.js)
-if (firebaseConfig) {
-  app = initializeApp(firebaseConfig);
-  console.log("Firebase initialized with config from Firebase Hosting.");
-} else {
-  // Fallback for local development using environment variables
-  console.log("Firebase config not found, using environment variables for local development.");
+// ¿Hay aplicaciones de Firebase ya inicializadas?
+if (getApps().length === 0) {
+  // NO: Estamos en desarrollo local. Inicializamos la app.
+  console.log("No Firebase app found, initializing for local development...");
   const localFirebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -23,10 +17,14 @@ if (firebaseConfig) {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
   };
   app = initializeApp(localFirebaseConfig);
+} else {
+  // SÍ: Estamos en producción. Obtenemos la app que init.js ya creó.
+  console.log("Firebase already initialized by hosting script. Getting app...");
+  app = getApp();
 }
 
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 
-export { auth, provider, db };
+export { auth, provider, db, app };

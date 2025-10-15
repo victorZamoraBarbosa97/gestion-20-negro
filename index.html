@@ -7,7 +7,33 @@
   </head>
   <body>
     <div id="root"></div>
-    
+    <script src="/__/firebase/8.10.1/firebase-app.js"></script>
+    <script src="/__/firebase/8.10.1/firebase-auth.js"></script>
+    <script src="/__/firebase/8.10.1/firebase-firestore.js"></script>
+
+    <script src="/__/firebase/init.js"></script>
+
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- check firebase init before run app -->
+    <!-- <script type="text/javascript">
+      function loadApp() {
+        // Condición: ¿Existe el objeto 'firebase' y ya tiene una app inicializada?
+        if (typeof firebase !== "undefined" && firebase.apps.length > 0) {
+          // ¡Sí! Firebase está listo. Creamos y añadimos el script de nuestra app.
+          console.log("Firebase is ready, loading application script...");
+          var script = document.createElement("script");
+          script.type = "module";
+          script.src = "/src/main.jsx"; // Asegúrate de que esta ruta sea correcta
+          document.body.appendChild(script);
+        } else {
+          // Todavía no. Esperamos 100 milisegundos y volvemos a revisar.
+          setTimeout(loadApp, 100);
+        }
+      }
+
+      // Iniciar la primera revisión
+      loadApp();
+    </script> -->
   </body>
 </html>

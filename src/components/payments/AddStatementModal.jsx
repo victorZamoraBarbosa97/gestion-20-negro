@@ -1,7 +1,7 @@
-// src/components/payments/AddPaymentModal.jsx
+// src/components/statements/AddStatementModal.jsx
 import React, { useState, useEffect } from "react";
 
-const AddPaymentModal = ({
+const AddStatementModal = ({
   isOpen,
   onClose,
   onInitialUpload,
@@ -10,19 +10,19 @@ const AddPaymentModal = ({
 }) => {
   // --- ESTADO INTERNO DEL MODAL ---
   const [modalStep, setModalStep] = useState("initial"); // 'initial', 'review', 'manual'
-  const [amount, setAmount] = useState("");
-  const [displayAmount, setDisplayAmount] = useState("");
+  const [monthlyTotal, setMonthlyTotal] = useState(""); // Almacena el monto numérico
+  const [displayTotal, setDisplayTotal] = useState(""); // Almacena el monto formateado para mostrar
   const [receiptFile, setReceiptFile] = useState(null);
-  const [paymentId, setPaymentId] = useState(null); // Guarda el ID entre pasos
+  const [paymentId, setPaymentId] = useState(null); // Guarda el ID del documento entre pasos
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Resetea el modal cada vez que se abre
+  // Resetea el estado del modal cada vez que se abre
   useEffect(() => {
     if (isOpen) {
       setModalStep("initial");
-      setAmount("");
-      setDisplayAmount("");
+      setMonthlyTotal("");
+      setDisplayTotal("");
       setReceiptFile(null);
       setPaymentId(null);
       setError("");
@@ -30,6 +30,7 @@ const AddPaymentModal = ({
     }
   }, [isOpen]);
 
+  // Maneja el cambio en el input de monto, formateándolo
   const handleAmountChange = (e) => {
     const rawValue = e.target.value.replace(/[^0-9.]/g, "");
     const parts = rawValue.split(".");
@@ -37,8 +38,8 @@ const AddPaymentModal = ({
     const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     const formattedValue =
       parts[1] !== undefined ? `${integerPart}.${parts[1]}` : integerPart;
-    setAmount(rawValue);
-    setDisplayAmount(formattedValue);
+    setMonthlyTotal(rawValue);
+    setDisplayTotal(formattedValue);
   };
 
   const handleSubmit = async (e) => {
@@ -53,32 +54,32 @@ const AddPaymentModal = ({
         setIsSubmitting(false);
         return;
       }
-      // Llama a la primera función del hook
+      // Llama a la primera función del hook (onInitialUpload)
       const result = await onInitialUpload({
         receiptFile,
         type: defaultType,
-        submissionType: "PAYMENT",
+        submissionType: "STATEMENT", // Siempre es STATEMENT aquí
       });
 
       if (result.success) {
-        // IA ÉXITO: Pasa al paso de revisión
+        // ÉXITO DE LA IA: Pasa al paso de revisión
         setPaymentId(result.paymentId);
-        setAmount(result.aiAmount.toString());
-        setDisplayAmount(Number(result.aiAmount).toLocaleString("es-MX"));
+        setMonthlyTotal(result.aiAmount.toString());
+        setDisplayTotal(Number(result.aiAmount).toLocaleString("es-MX"));
         setModalStep("review");
       } else if (result.paymentId) {
-        // IA FALLO: Pasa al paso de entrada manual
+        // FALLO DE LA IA: Pasa al paso de entrada manual
         setPaymentId(result.paymentId);
         setModalStep("manual");
       }
     } else if (modalStep === "review" || modalStep === "manual") {
-      // Llama a la segunda función del hook para confirmar
+      // Llama a la segunda función del hook para confirmar el monto
       await onConfirmPayment({
         paymentId,
-        amount,
-        submissionType: "PAYMENT",
+        amount: monthlyTotal, // Usa el monto del estado
+        submissionType: "STATEMENT",
       });
-      onClose(); // Cierra el modal al finalizar con éxito
+      onClose(); // Cierra el modal al finalizar
     }
     setIsSubmitting(false);
   };
@@ -97,15 +98,16 @@ const AddPaymentModal = ({
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <h3 className="text-xl font-bold text-slate-800">
-              Añadir Pago de {defaultType === "VIA" ? "VIA" : "Pronósticos"}
+              Estado de Cuenta de{" "}
+              {defaultType === "VIA" ? "VIA" : "Pronósticos"}
             </h3>
             <p className="text-sm text-slate-500">
               {modalStep === "initial" &&
-                "Sube un comprobante para analizarlo con IA."}
+                "Sube el archivo para que sea procesado automáticamente."}
               {modalStep === "review" &&
                 "La IA detectó este monto. Confirma o edítalo."}
               {modalStep === "manual" &&
-                "Ingresa el monto del pago manualmente."}
+                "Ingresa el monto total del estado de cuenta."}
             </p>
           </div>
           <div className="px-6 pb-6 space-y-4">
@@ -113,10 +115,10 @@ const AddPaymentModal = ({
             {(modalStep === "review" || modalStep === "manual") && (
               <div>
                 <label
-                  htmlFor="amount"
+                  htmlFor="statement-amount"
                   className="block text-sm font-medium text-slate-700 mb-1"
                 >
-                  Monto
+                  Monto Total
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
@@ -124,8 +126,8 @@ const AddPaymentModal = ({
                   </span>
                   <input
                     type="text"
-                    id="amount"
-                    value={displayAmount}
+                    id="statement-amount"
+                    value={displayTotal}
                     onChange={handleAmountChange}
                     placeholder="0.00"
                     className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg"
@@ -138,14 +140,14 @@ const AddPaymentModal = ({
             {modalStep === "initial" && (
               <div>
                 <label
-                  htmlFor="receipt"
+                  htmlFor="statement-file"
                   className="block text-sm font-medium text-slate-700 mb-1"
                 >
-                  Comprobante
+                  Archivo del Estado de Cuenta
                 </label>
                 <input
                   type="file"
-                  id="receipt"
+                  id="statement-file"
                   onChange={(e) => setReceiptFile(e.target.files[0])}
                   className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
                   required
@@ -180,4 +182,4 @@ const AddPaymentModal = ({
   );
 };
 
-export default AddPaymentModal;
+export default AddStatementModal;

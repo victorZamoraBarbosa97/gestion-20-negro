@@ -1,6 +1,22 @@
 // src/context/AuthContext.jsx
-import { createContext, useState, useEffect, useCallback, useContext } from "react";
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult, setPersistence, browserSessionPersistence, signInAnonymously } from "firebase/auth";
+import {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useContext,
+} from "react";
+import {
+  onAuthStateChanged,
+  signOut,
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  setPersistence,
+  browserSessionPersistence,
+  signInAnonymously,
+  signInWithPopup,
+} from "firebase/auth";
 import { auth, db } from "../firebase/config";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import toast from "react-hot-toast";
@@ -15,13 +31,22 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async () => {
     try {
       await setPersistence(auth, browserSessionPersistence);
-      await signInWithRedirect(auth, new GoogleAuthProvider());
+
+      // Here is your new conditional logic!
+      if (window.location.hostname === "localhost") {
+        // Use popup for local development
+        await signInWithPopup(auth, new GoogleAuthProvider());
+      } else {
+        // Use redirect for production
+        await signInWithRedirect(auth, new GoogleAuthProvider());
+      }
     } catch (error) {
-      toast.error("Error al configurar o iniciar el inicio de sesión.");
+      toast.error("Error al iniciar el inicio de sesión.");
+      // This catch block will now catch errors from the popup!
       console.error("Error en el proceso de login:", error);
     }
   }, []);
-  
+
   const loginAsGuest = useCallback(async () => {
     try {
       await setPersistence(auth, browserSessionPersistence);
@@ -53,16 +78,20 @@ export const AuthProvider = ({ children }) => {
         await getRedirectResult(auth);
       } catch (error) {
         // Capturamos cualquier error que ocurriera en la página de Google.
-        console.error("Error durante el procesamiento de la redirección:", error);
-        toast.error("Fallo en el inicio de sesión. Por favor, intenta de nuevo.");
+        console.error(
+          "Error durante el procesamiento de la redirección:",
+          error
+        );
+        toast.error(
+          "Fallo en el inicio de sesión. Por favor, intenta de nuevo."
+        );
       }
-      
+
       // 2. SEGUNDO: Configuramos el listener.
-      // Ahora que la redirección está procesada, onAuthStateChanged tendrá el estado de usuario definitivo y correcto.
       unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
           if (user.isAnonymous) {
-            setCurrentUser({ ...user, displayName: 'Invitado' });
+            setCurrentUser({ ...user, displayName: "Invitado" });
           } else {
             try {
               const allowlistRef = doc(db, "allowlist", user.email);
@@ -70,14 +99,18 @@ export const AuthProvider = ({ children }) => {
 
               if (allowlistSnap.exists()) {
                 const userRef = doc(db, "usuarios", user.uid);
-                await setDoc(userRef, {
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName,
-                  photoURL: user.photoURL,
-                  lastLogin: serverTimestamp(),
-                  role: allowlistSnap.data().role || "user",
-                }, { merge: true });
+                await setDoc(
+                  userRef,
+                  {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    lastLogin: serverTimestamp(),
+                    role: allowlistSnap.data().role || "user",
+                  },
+                  { merge: true }
+                );
                 setCurrentUser(user);
               } else {
                 toast.error(`Acceso denegado: ${user.email} no autorizado.`);
@@ -105,9 +138,5 @@ export const AuthProvider = ({ children }) => {
 
   const value = { currentUser, loading, login, logout, loginAsGuest };
 
-  return (
-    <AuthContext.Provider value={value}>
-       {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
