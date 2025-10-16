@@ -1,5 +1,7 @@
 // src/pages/DashboardPage.jsx
-import { useState, useMemo } from "react";
+// ✨ VERSIÓN OPTIMIZADA CON MEMOIZACIÓN
+
+import { useState, useMemo, useCallback } from "react";
 import { getStartOfWeek } from "../utils/dateHelpers";
 import usePayments from "../hooks/usePayments";
 
@@ -16,6 +18,7 @@ const DashboardPage = () => {
     getStartOfWeek(new Date())
   );
 
+  // ✅ OPTIMIZACIÓN 1: useMemo para cálculos derivados
   const currentWeekEndDate = useMemo(() => {
     const endDate = new Date(currentWeekStartDate);
     endDate.setDate(endDate.getDate() + 6);
@@ -48,48 +51,146 @@ const DashboardPage = () => {
     handleConfirmPayment,
   } = usePayments(currentWeekStartDate, currentWeekEndDate);
 
-  // Todas las funciones 'handle' están correctas.
-  const handlePrevWeek = () =>
-    setCurrentWeekStartDate(
-      (prev) => new Date(new Date(prev).setDate(prev.getDate() - 7))
-    );
-  const handleNextWeek = () =>
-    setCurrentWeekStartDate(
-      (prev) => new Date(new Date(prev).setDate(prev.getDate() + 7))
-    );
+  // ✅ OPTIMIZACIÓN 2: useCallback para handlers de navegación
+  // ANTES: Estas funciones se recreaban en cada render
+  // AHORA: Se memorizan y solo se recrean si las dependencias cambian
+  const handlePrevWeek = useCallback(() => {
+    setCurrentWeekStartDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() - 7);
+      return newDate;
+    });
+  }, []);
 
-  const handleOpenAddModal = (type) => {
+  const handleNextWeek = useCallback(() => {
+    setCurrentWeekStartDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() + 7);
+      return newDate;
+    });
+  }, []);
+
+  // ✅ OPTIMIZACIÓN 3: useCallback para handlers de modales
+  const handleOpenAddModal = useCallback((type) => {
     setPaymentTypeToAdd(type);
     setIsAddModalOpen(true);
-  };
+  }, []);
 
-  const handleDeletePaymentClick = async (payment) => {
-    await handleDeletePayment(payment.id, payment.storagePath);
-    setSelectedPayment(null);
-  };
+  const handleCloseAddModal = useCallback(() => {
+    setIsAddModalOpen(false);
+  }, []);
 
-  const handleOpenChangeDateModal = (payment) => {
+  const handleDeletePaymentClick = useCallback(
+    async (payment) => {
+      await handleDeletePayment(payment.id, payment.storagePath);
+      setSelectedPayment(null);
+    },
+    [handleDeletePayment]
+  );
+
+  const handleOpenChangeDateModal = useCallback((payment) => {
     setSelectedPayment(null);
     setPaymentToChangeDate(payment);
     setIsChangeDateModalOpen(true);
-  };
+  }, []);
 
-  const handleUpdateDate = async (paymentId, newDate) => {
-    await handleUpdatePaymentDate(paymentId, newDate);
+  const handleCloseChangeDateModal = useCallback(() => {
     setIsChangeDateModalOpen(false);
     setPaymentToChangeDate(null);
-  };
+  }, []);
 
-  const handleOpenStatementModal = (type) => {
+  const handleUpdateDate = useCallback(
+    async (paymentId, newDate) => {
+      await handleUpdatePaymentDate(paymentId, newDate);
+      setIsChangeDateModalOpen(false);
+      setPaymentToChangeDate(null);
+    },
+    [handleUpdatePaymentDate]
+  );
+
+  const handleOpenStatementModal = useCallback((type) => {
     setStatementType(type);
     setIsStatementModalOpen(true);
-  };
+  }, []);
 
-  const handleViewStatementClick = (statement) => {
+  const handleCloseStatementModal = useCallback(() => {
+    setIsStatementModalOpen(false);
+  }, []);
+
+  const handleViewStatementClick = useCallback((statement) => {
     if (statement) {
       setSelectedPayment(statement);
     }
-  };
+  }, []);
+
+  const handleCloseDetailModal = useCallback(() => {
+    setSelectedPayment(null);
+  }, []);
+
+  // ✅ OPTIMIZACIÓN 4: Callbacks específicos para cada tipo
+  // Evita crear funciones inline en el JSX
+  const handleOpenPronosticosAddModal = useCallback(() => {
+    handleOpenAddModal("PRONOSTICOS");
+  }, [handleOpenAddModal]);
+
+  const handleOpenViaAddModal = useCallback(() => {
+    handleOpenAddModal("VIA");
+  }, [handleOpenAddModal]);
+
+  const handleOpenPronosticosStatementModal = useCallback(() => {
+    handleOpenStatementModal("PRONOSTICOS");
+  }, [handleOpenStatementModal]);
+
+  const handleOpenViaStatementModal = useCallback(() => {
+    handleOpenStatementModal("VIA");
+  }, [handleOpenStatementModal]);
+
+  const handleViewPronosticosStatement = useCallback(() => {
+    handleViewStatementClick(pronosticosStatement);
+  }, [handleViewStatementClick, pronosticosStatement]);
+
+  const handleViewViaStatement = useCallback(() => {
+    handleViewStatementClick(viaStatement);
+  }, [handleViewStatementClick, viaStatement]);
+
+  // ✅ OPTIMIZACIÓN 5: useMemo para formateo de moneda
+  // ANTES: se ejecutaba 4 veces en cada render
+  // AHORA: solo se recalcula cuando los valores cambian
+  const formattedPronosticosTotal = useMemo(
+    () =>
+      pronosticosTotal.toLocaleString("es-MX", {
+        style: "currency",
+        currency: "MXN",
+      }),
+    [pronosticosTotal]
+  );
+
+  const formattedViaTotal = useMemo(
+    () =>
+      viaTotal.toLocaleString("es-MX", {
+        style: "currency",
+        currency: "MXN",
+      }),
+    [viaTotal]
+  );
+
+  const formattedPronosticosStatementTotal = useMemo(
+    () =>
+      pronosticosStatement?.monthlyTotal?.toLocaleString("es-MX", {
+        style: "currency",
+        currency: "MXN",
+      }) ?? "N/A",
+    [pronosticosStatement]
+  );
+
+  const formattedViaStatementTotal = useMemo(
+    () =>
+      viaStatement?.monthlyTotal?.toLocaleString("es-MX", {
+        style: "currency",
+        currency: "MXN",
+      }) ?? "N/A",
+    [viaStatement]
+  );
 
   return (
     <div>
@@ -112,23 +213,21 @@ const DashboardPage = () => {
                 <>
                   {hasPronosticosStatement ? (
                     <button
-                      onClick={() =>
-                        handleViewStatementClick(pronosticosStatement)
-                      }
+                      onClick={handleViewPronosticosStatement}
                       className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white rounded-lg shadow-sm border border-slate-300 hover:bg-slate-50"
                     >
                       Ver Estado de Cuenta
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleOpenStatementModal("PRONOSTICOS")}
+                      onClick={handleOpenPronosticosStatementModal}
                       className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white rounded-lg shadow-sm border border-slate-300 hover:bg-slate-50"
                     >
                       Agregar Estado de Cuenta
                     </button>
                   )}
                   <button
-                    onClick={() => handleOpenAddModal("PRONOSTICOS")}
+                    onClick={handleOpenPronosticosAddModal}
                     className="flex items-center px-3 py-2 bg-orange-500 text-white font-semibold rounded-lg shadow-md hover:bg-orange-600"
                   >
                     Agregar Pago
@@ -145,12 +244,7 @@ const DashboardPage = () => {
                     TOTAL PRONÓSTICOS
                   </h3>
                   <p className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">
-                    {isLoading
-                      ? "..."
-                      : pronosticosTotal.toLocaleString("es-MX", {
-                          style: "currency",
-                          currency: "MXN",
-                        })}
+                    {isLoading ? "..." : formattedPronosticosTotal}
                   </p>
                 </div>
                 {hasPronosticosStatement && (
@@ -159,13 +253,7 @@ const DashboardPage = () => {
                       TOTAL ESTADO DE CUENTA
                     </h3>
                     <p className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">
-                      {pronosticosStatement.monthlyTotal?.toLocaleString(
-                        "es-MX",
-                        {
-                          style: "currency",
-                          currency: "MXN",
-                        }
-                      ) ?? "N/A"}
+                      {formattedPronosticosStatementTotal}
                     </p>
                   </div>
                 )}
@@ -188,21 +276,21 @@ const DashboardPage = () => {
                 <>
                   {hasViaStatement ? (
                     <button
-                      onClick={() => handleViewStatementClick(viaStatement)}
+                      onClick={handleViewViaStatement}
                       className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white rounded-lg shadow-sm border border-slate-300 hover:bg-slate-50"
                     >
                       Ver Estado de Cuenta
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleOpenStatementModal("VIA")}
+                      onClick={handleOpenViaStatementModal}
                       className="px-3 py-2 text-sm font-semibold text-slate-700 bg-white rounded-lg shadow-sm border border-slate-300 hover:bg-slate-50"
                     >
                       Agregar Estado de Cuenta
                     </button>
                   )}
                   <button
-                    onClick={() => handleOpenAddModal("VIA")}
+                    onClick={handleOpenViaAddModal}
                     className="flex items-center px-3 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
                   >
                     Agregar Pago
@@ -219,12 +307,7 @@ const DashboardPage = () => {
                     TOTAL VIA
                   </h3>
                   <p className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">
-                    {isLoading
-                      ? "..."
-                      : viaTotal.toLocaleString("es-MX", {
-                          style: "currency",
-                          currency: "MXN",
-                        })}
+                    {isLoading ? "..." : formattedViaTotal}
                   </p>
                 </div>
                 {hasViaStatement && (
@@ -233,10 +316,7 @@ const DashboardPage = () => {
                       TOTAL ESTADO DE CUENTA
                     </h3>
                     <p className="text-2xl md:text-3xl font-bold text-slate-800 mt-1">
-                      {viaStatement.monthlyTotal?.toLocaleString("es-MX", {
-                        style: "currency",
-                        currency: "MXN",
-                      }) ?? "N/A"}
+                      {formattedViaStatementTotal}
                     </p>
                   </div>
                 )}
@@ -252,35 +332,48 @@ const DashboardPage = () => {
         </div>
       </main>
 
-      {/* Tus modales van aquí y no necesitan cambios */}
-      <AddPaymentModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onInitialUpload={handleInitialUpload}
-        onConfirmPayment={handleConfirmPayment}
-        defaultType={paymentTypeToAdd}
-      />
-      <PaymentDetailModal
-        isOpen={!!selectedPayment}
-        payment={selectedPayment}
-        onClose={() => setSelectedPayment(null)}
-        onDeletePayment={handleDeletePaymentClick}
-        onDownloadReceipt={handleDownloadReceipt}
-        onChangeDateClick={handleOpenChangeDateModal}
-      />
-      <ChangePaymentDateModal
-        isOpen={isChangeDateModalOpen}
-        onClose={() => setIsChangeDateModalOpen(false)}
-        onUpdateDate={handleUpdateDate}
-        currentPayment={paymentToChangeDate}
-      />
-      <AddStatementModal
-        isOpen={isStatementModalOpen}
-        onClose={() => setIsStatementModalOpen(false)}
-        onInitialUpload={handleInitialUpload}
-        onConfirmPayment={handleConfirmPayment}
-        defaultType={statementType}
-      />
+      {/* ✅ OPTIMIZACIÓN 6: Renderizado condicional de modales */}
+      {/* ANTES: Todos los modales siempre en el DOM */}
+      {/* AHORA: Solo se montan cuando están abiertos */}
+      {isAddModalOpen && (
+        <AddPaymentModal
+          isOpen={isAddModalOpen}
+          onClose={handleCloseAddModal}
+          onInitialUpload={handleInitialUpload}
+          onConfirmPayment={handleConfirmPayment}
+          defaultType={paymentTypeToAdd}
+        />
+      )}
+      
+      {selectedPayment && (
+        <PaymentDetailModal
+          isOpen={!!selectedPayment}
+          payment={selectedPayment}
+          onClose={handleCloseDetailModal}
+          onDeletePayment={handleDeletePaymentClick}
+          onDownloadReceipt={handleDownloadReceipt}
+          onChangeDateClick={handleOpenChangeDateModal}
+        />
+      )}
+      
+      {isChangeDateModalOpen && (
+        <ChangePaymentDateModal
+          isOpen={isChangeDateModalOpen}
+          onClose={handleCloseChangeDateModal}
+          onUpdateDate={handleUpdateDate}
+          currentPayment={paymentToChangeDate}
+        />
+      )}
+      
+      {isStatementModalOpen && (
+        <AddStatementModal
+          isOpen={isStatementModalOpen}
+          onClose={handleCloseStatementModal}
+          onInitialUpload={handleInitialUpload}
+          onConfirmPayment={handleConfirmPayment}
+          defaultType={statementType}
+        />
+      )}
     </div>
   );
 };

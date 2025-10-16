@@ -3,7 +3,15 @@
   "version": "1.0.0",
   "description": "Función para analizar estados de cuenta con Gemini",
   "scripts": {
-    "start": "functions-framework --target=getTotalAmount"
+    "start": "functions-framework --target=getTotalAmount",
+    "predeploy": "node pre-deploy.mjs",
+    "deploy": "gcloud functions deploy getTotalAmount --gen2 --runtime=nodejs22 --region=us-central1 --source=. --entry-point=getTotalAmount --trigger-http --allow-unauthenticated",
+    "deploy:prod": "gcloud functions deploy getTotalAmount --gen2 --runtime=nodejs22 --region=us-central1 --source=. --entry-point=getTotalAmount --trigger-http --allow-unauthenticated --max-instances=10 --memory=512MB --timeout=60s",
+    "logs": "gcloud functions logs read getTotalAmount --region=us-central1 --limit=50",
+    "logs:live": "gcloud functions logs read getTotalAmount --region=us-central1 --limit=50 --format='value(log)' --follow",
+    "describe": "gcloud functions describe getTotalAmount --region=us-central1 --gen2",
+    "url": "gcloud functions describe getTotalAmount --region=us-central1 --gen2 --format='value(serviceConfig.uri)'",
+    "delete": "gcloud functions delete getTotalAmount --region=us-central1 --gen2"
   },
   "type": "module",
   "engines": {
