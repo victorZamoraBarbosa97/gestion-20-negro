@@ -1,0 +1,89 @@
+
+```
+├── 📁 .firebase
+├── 📁 .idx
+│   └── 📄 dev.nix
+├── 📁 functions
+│   ├── 📄 .eslintrc.js
+│   ├── ⚙️ .gcloudignore
+│   ├── ⚙️ .gitignore
+│   ├── 📝 DEPLOYMENT.md
+│   ├── 📝 README.md
+│   ├── 📄 index.js
+│   ├── ⚙️ package-lock.json
+│   ├── ⚙️ package.json
+│   ├── 📄 pre-deploy.mjs
+│   ├── ⚙️ service-account-key example.json
+│   ├── ⚙️ service-account-key.json
+│   └── 📄 validation.js
+├── 📁 public
+│   ├── 🖼️ logo.jpg
+│   └── 🖼️ logo.svg
+├── 📁 src
+│   ├── 📁 components
+│   │   ├── 📁 dashboard
+│   │   │   ├── 📄 DashboardModals.jsx
+│   │   │   ├── 📄 PaymentSection.jsx
+│   │   │   └── 📄 index.js
+│   │   ├── 📁 layout
+│   │   │   ├── 📄 AppLayout.jsx
+│   │   │   ├── 📄 Layout.jsx
+│   │   │   └── 📄 MainLayout.jsx
+│   │   ├── 📁 navigation
+│   │   │   ├── 📄 Header.jsx
+│   │   │   ├── 📄 NotificationBanner.jsx
+│   │   │   └── 📄 WeekNavigator.jsx
+│   │   ├── 📁 payments
+│   │   │   ├── 📄 AddPaymentModal.jsx
+│   │   │   ├── 📄 AddStatementModal.jsx
+│   │   │   ├── 📄 ChangePaymentDateModal.jsx
+│   │   │   ├── 📄 PaymentDetailModal.jsx
+│   │   │   ├── 📄 PaymentList.jsx
+│   │   │   └── 📄 PaymentListItem.jsx
+│   │   ├── 📁 ui
+│   │   │   ├── 📄 Icons.jsx
+│   │   │   └── 📄 ThemeToggle.jsx
+│   │   ├── 📄 ErrorAlert.jsx
+│   │   ├── 📄 ErrorBoundary.jsx
+│   │   ├── 📄 ErrorFallback.jsx
+│   │   └── 📄 PageLoader.jsx
+│   ├── 📁 context
+│   │   ├── 📄 AuthContext.jsx
+│   │   └── 📄 ThemeContext.jsx
+│   ├── 📁 firebase
+│   │   └── 📄 config.js
+│   ├── 📁 hooks
+│   │   ├── 📄 useDashboardController.js
+│   │   ├── 📄 useErrorHandler.js
+│   │   ├── 📄 useNotifications.js
+│   │   ├── 📄 usePayments.jsx
+│   │   └── 📄 useReportsController.js
+│   ├── 📁 pages
+│   │   ├── 📄 DashboardPage.jsx
+│   │   ├── 📄 LoginPage.jsx
+│   │   └── 📄 ReportsPage.jsx
+│   ├── 📁 services
+│   │   ├── 📄 cloudFunctions.js
+│   │   └── 📄 firestoreService.js
+│   ├── 📁 utils
+│   │   ├── 📄 dateHelpers.jsx
+│   │   ├── 📄 errorHandler.js
+│   │   ├── 📄 errorSystem.js
+│   │   └── 📄 logger.js
+│   ├── 📄 App.jsx
+│   ├── 🎨 main.css
+│   └── 📄 main.jsx
+├── ⚙️ .env.example
+├── ⚙️ .firebaserc
+├── ⚙️ .gitignore
+├── ⚙️ .runtimeconfig.json
+├── 📝 README.md
+├── 📄 ZZ__NOTAS.txt
+├── 📄 cors.js
+├── 📄 eslint.config.js
+├── ⚙️ firebase.json
+├── 🌐 index.html
+├── ⚙️ package-lock.json
+├── ⚙️ package.json
+└── 📄 vite.config.js
+```

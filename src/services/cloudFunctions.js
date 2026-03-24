@@ -2,15 +2,15 @@
  * Servicio para interactuar con Google Cloud Functions
  * Ahora con manejo robusto de errores
  */
-
-import { logger } from '../utils/logger';
-import { AppError, handleHTTPError } from '../utils/errorHandler';
+import { React } from "react";
+import { logger } from "../utils/logger";
+import { AppError, handleHTTPError } from "../utils/errorHandler";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Analiza una imagen de estado de cuenta o pago usando Gemini AI
- * 
+ *
  * @param {string} firestorePath - Ruta del documento en Firestore
  * @param {'STATEMENT' | 'PAYMENT'} submissionType - Tipo de documento
  * @returns {Promise<{total: string}>}
@@ -18,17 +18,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
  */
 export async function getTotalAmount(firestorePath, submissionType) {
   const startTime = performance.now();
-  
+
   try {
-    logger.info('Iniciando análisis de documento', {
+    logger.info("Iniciando análisis de documento", {
       firestorePath,
       submissionType,
     });
 
     const response = await fetch(`${API_BASE_URL}/getTotalAmount`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         firestorePath,
@@ -39,29 +39,29 @@ export async function getTotalAmount(firestorePath, submissionType) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.error || handleHTTPError(response);
-      
-      logger.error('Error en respuesta de Cloud Function', new Error(errorMessage), {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-      });
 
-      throw new AppError(
-        errorMessage,
-        'CLOUD_FUNCTION_ERROR',
-        response.status
+      logger.error(
+        "Error en respuesta de Cloud Function",
+        new Error(errorMessage),
+        {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        },
       );
+
+      throw new AppError(errorMessage, "CLOUD_FUNCTION_ERROR", response.status);
     }
 
     const data = await response.json();
-    
+
     const duration = performance.now() - startTime;
-    logger.performance('cloud_function_call', duration, {
+    logger.performance("cloud_function_call", duration, {
       submissionType,
       success: true,
     });
 
-    logger.info('Análisis completado exitosamente', {
+    logger.info("Análisis completado exitosamente", {
       total: data.total,
       duration: `${duration}ms`,
     });
@@ -69,8 +69,8 @@ export async function getTotalAmount(firestorePath, submissionType) {
     return data;
   } catch (error) {
     const duration = performance.now() - startTime;
-    
-    logger.error('Error llamando a getTotalAmount', error, {
+
+    logger.error("Error llamando a getTotalAmount", error, {
       firestorePath,
       submissionType,
       duration: `${duration}ms`,
@@ -82,29 +82,29 @@ export async function getTotalAmount(firestorePath, submissionType) {
     }
 
     // Si es un error de red
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    if (error instanceof TypeError && error.message.includes("fetch")) {
       throw new AppError(
-        'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
-        'NETWORK_ERROR',
-        0
+        "No se pudo conectar con el servidor. Verifica tu conexión a internet.",
+        "NETWORK_ERROR",
+        0,
       );
     }
 
     // Error genérico
     throw new AppError(
-      'Error al procesar el documento. Por favor, intenta de nuevo.',
-      'UNKNOWN_ERROR',
-      500
+      "Error al procesar el documento. Por favor, intenta de nuevo.",
+      "UNKNOWN_ERROR",
+      500,
     );
   }
 }
 
 /**
  * Hook de React para usar el servicio getTotalAmount con manejo de errores integrado
- * 
+ *
  * @example
  * const { analyze, loading, error, result } = useGetTotalAmount();
- * 
+ *
  * const handleAnalyze = async () => {
  *   try {
  *     await analyze('submissions/abc123', 'STATEMENT');
@@ -126,8 +126,8 @@ export function useGetTotalAmount() {
     try {
       const data = await getTotalAmount(firestorePath, submissionType);
       setResult(data);
-      
-      logger.event('document_analyzed', {
+
+      logger.event("document_analyzed", {
         submissionType,
         success: true,
       });
@@ -135,8 +135,8 @@ export function useGetTotalAmount() {
       return data;
     } catch (err) {
       setError(err.message);
-      
-      logger.event('document_analysis_failed', {
+
+      logger.event("document_analysis_failed", {
         submissionType,
         errorCode: err.code,
       });

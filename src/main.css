@@ -1,20 +1,44 @@
 @import "tailwindcss";
 
+@theme {
+  /* 🎨 Paleta Personalizada - Gestión 20 Negro */
+
+  /* Colores de Negocio (Semánticos) */
+  --color-pronosticos: #ea580c; /* Naranja Intenso (Orange 600) - Para botones/títulos claros */
+  --color-pronosticos-light: #fb923c; /* Naranja Suave (Orange 400) - Para textos en fondo oscuro */
+
+  --color-via: #2563eb; /* Azul Real (Blue 600) - Para botones/títulos claros */
+  --color-via-light: #60a5fa; /* Azul Cielo (Blue 400) - Para textos en fondo oscuro */
+
+  /* Base Oscura Premium ("20 Negro") */
+  --color-dark-main: #020617; /* Fondo Principal (Slate 950) - Más profundo que el gris estándar */
+  --color-dark-surface: #1e293b; /* Tarjetas/Modales (Slate 800) */
+  --color-dark-border: #334155; /* Bordes (Slate 700) */
+}
+
+/* ✨ TAILWIND V4: Sobrescribir la variante 'dark' para que funcione con clases */
+@variant dark (&:where(.dark, .dark *));
+
 .loader {
   width: 175px;
   height: 80px;
   display: block;
   margin: auto;
-  background-image: radial-gradient(
-      circle 25px at 25px 25px,
-      #fff 100%,
-      transparent 0
-    ),
+  background-image:
+    radial-gradient(circle 25px at 25px 25px, #fff 100%, transparent 0),
     radial-gradient(circle 50px at 50px 50px, #fff 100%, transparent 0),
     radial-gradient(circle 25px at 25px 25px, #fff 100%, transparent 0),
     linear-gradient(#fff 50px, transparent 0);
-  background-size: 50px 50px, 100px 76px, 50px 50px, 120px 40px;
-  background-position: 0px 30px, 37px 0px, 122px 30px, 25px 40px;
+  background-size:
+    50px 50px,
+    100px 76px,
+    50px 50px,
+    120px 40px;
+  background-position:
+    0px 30px,
+    37px 0px,
+    122px 30px,
+    25px 40px;
   background-repeat: no-repeat;
   position: relative;
   box-sizing: border-box;

@@ -1,11 +1,11 @@
 // src/context/AuthContext.jsx
-// ✨ VERSIÓN MEJORADA - Sin Race Conditions
 import {
   createContext,
   useState,
   useEffect,
   useCallback,
   useContext,
+  useRef,
 } from "react";
 import {
   onAuthStateChanged,
@@ -14,7 +14,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   setPersistence,
-  browserSessionPersistence,
+  browserLocalPersistence,
   signInAnonymously,
   signInWithPopup,
 } from "firebase/auth";
@@ -24,6 +24,8 @@ import toast from "react-hot-toast";
 import { logger } from "../utils/logger";
 
 export const AuthContext = createContext();
+
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -35,41 +37,60 @@ export const AuthProvider = ({ children }) => {
   const [initialized, setInitialized] = useState(false); // Para la inicialización de Firebase
   const [authError, setAuthError] = useState(null); // Para errores de auth
 
-  // ✅ MEJORA 2: Login con mejor manejo de errores
+  // ✅ MEJORA: Mutex para evitar doble ejecución (doble clic)
+  // useRef cambia instantáneamente sin esperar al re-render de React
+  const isOperating = useRef(false);
+
+  // MEJORA 2: Login con mejor manejo de errores
   const login = useCallback(async () => {
+    if (isOperating.current) return; // 🔒 Bloqueo inmediato
+    isOperating.current = true;
+
     setLoading(true);
     setAuthError(null);
-    
-    try {
-      await setPersistence(auth, browserSessionPersistence);
 
-      if (window.location.hostname === "localhost") {
-        await signInWithPopup(auth, new GoogleAuthProvider());
-      } else {
+    try {
+      console.log("🔐 [AUTH] Iniciando proceso de login...");
+      await setPersistence(auth, browserLocalPersistence);
+
+      // ESTRATEGIA HÍBRIDA ROBUSTA
+      // Móvil: Redirect (Obligatorio por UX y limitaciones de SO)
+      // Desktop: Popup (Más fiable, evita problemas de cookies/storage en redirecciones)
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      console.log("📱 [AUTH] ¿Es dispositivo móvil?:", isMobile);
+
+      if (isMobile) {
+        console.log("🔀 [AUTH] Ejecutando signInWithRedirect...");
         await signInWithRedirect(auth, new GoogleAuthProvider());
+      } else {
+        console.log("🪟 [AUTH] Ejecutando signInWithPopup...");
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        console.log("✅ [AUTH] Popup cerrado y autenticación exitosa.");
       }
-      
-      logger.event('login_initiated', { method: 'google' });
     } catch (error) {
+      console.error("❌ [AUTH ERROR] Falló el login:", error);
       const errorMessage = "Error al iniciar el inicio de sesión.";
       setAuthError(errorMessage);
       toast.error(errorMessage);
       logger.error("Error en el proceso de login", error);
     } finally {
-      // ✅ Siempre limpiamos loading, incluso si hay error
+      // Siempre limpiamos loading, incluso si hay error
       setLoading(false);
+      isOperating.current = false; // 🔓 Liberar bloqueo
     }
   }, []);
 
   const loginAsGuest = useCallback(async () => {
+    if (isOperating.current) return; // 🔒 Bloqueo inmediato
+    isOperating.current = true;
+
     setLoading(true);
     setAuthError(null);
-    
+
     try {
-      await setPersistence(auth, browserSessionPersistence);
+      await setPersistence(auth, browserLocalPersistence);
       await signInAnonymously(auth);
       toast.success("Has iniciado sesión como invitado.");
-      logger.event('login_guest');
     } catch (error) {
       const errorMessage = "No se pudo iniciar sesión como invitado.";
       setAuthError(errorMessage);
@@ -77,24 +98,28 @@ export const AuthProvider = ({ children }) => {
       logger.error("Error en signInAnonymously", error);
     } finally {
       setLoading(false);
+      isOperating.current = false; // 🔓 Liberar bloqueo
     }
   }, []);
 
   const logout = useCallback(async () => {
+    if (isOperating.current) return; // 🔒 Bloqueo inmediato
+    isOperating.current = true;
+
     setLoading(true);
     setAuthError(null);
-    
+
     try {
       await signOut(auth);
-      toast.success("Sesión cerrada correctamente.");
-      logger.event('logout');
+      // El toast de éxito ya no es necesario aquí si onAuthStateChanged maneja la transición
+      // O podemos dejarlo, pero asegurarnos de que onAuthStateChanged no lance errores
+      toast.success("Sesión cerrada.");
     } catch (error) {
-      const errorMessage = "Error al cerrar sesión.";
-      setAuthError(errorMessage);
-      toast.error(errorMessage);
+      // Ignoramos errores de logout si son triviales (ej. ya estaba deslogueado)
       logger.error("Error en signOut", error);
     } finally {
       setLoading(false);
+      isOperating.current = false; // 🔓 Liberar bloqueo
     }
   }, []);
 
@@ -107,61 +132,34 @@ export const AuthProvider = ({ children }) => {
     let unsubscribe = () => {};
 
     const initializeAuth = async () => {
-      try {
-        // ✅ MEJORA 4: Procesar redirect ANTES de setup listener
-        // Protegido con isMounted
-        logger.info('Inicializando autenticación...');
-        
-        const redirectResult = await getRedirectResult(auth);
-        
-        // ✅ Verificar si aún estamos montados después del async
-        if (!isMounted) {
-          logger.warn('Componente desmontado durante getRedirectResult');
-          return;
-        }
-
-        if (redirectResult?.user) {
-          logger.info('Redirect result procesado', { 
-            uid: redirectResult.user.uid 
-          });
-        }
-      } catch (error) {
-        // ✅ Solo procesar error si seguimos montados
-        if (!isMounted) return;
-        
-        logger.error("Error durante el procesamiento de la redirección", error);
-        toast.error("Fallo en el inicio de sesión. Por favor, intenta de nuevo.");
-        setAuthError("Error en redirección de autenticación");
-      }
-
       // ✅ MEJORA 5: Setup listener con protección contra unmount
       unsubscribe = onAuthStateChanged(auth, async (user) => {
         // ✅ Verificar isMounted INMEDIATAMENTE al inicio del callback
         if (!isMounted) {
-          logger.warn('Componente desmontado durante onAuthStateChanged');
+          logger.warn("Componente desmontado durante onAuthStateChanged");
           return;
         }
 
         try {
           if (user) {
-            logger.info('Usuario detectado', { 
-              uid: user.uid, 
-              isAnonymous: user.isAnonymous 
+            logger.info("Usuario detectado", {
+              uid: user.uid,
+              isAnonymous: user.isAnonymous,
             });
 
-            // ✅ Caso: Usuario anónimo (invitado)
+            // Usuario anónimo (invitado)
             if (user.isAnonymous) {
-              if (!isMounted) return; // ✅ Verificar antes de setState
+              if (!isMounted) return; // Verificar antes de setState
               setCurrentUser({ ...user, displayName: "Invitado" });
               setAuthError(null);
             } else {
-              // ✅ Caso: Usuario autenticado con Google
-              
-              // ✅ MEJORA 6: Verificar allowlist con protección
+              // Usuario autenticado con Google
+
+              // Verificar allowlist con protección
               const allowlistRef = doc(db, "allowlist", user.email);
               const allowlistSnap = await getDoc(allowlistRef);
 
-              // ✅ Verificar isMounted después de operación async
+              // Verificar isMounted después de operación async
               if (!isMounted) return;
 
               if (allowlistSnap.exists()) {
@@ -177,96 +175,124 @@ export const AuthProvider = ({ children }) => {
                     lastLogin: serverTimestamp(),
                     role: allowlistSnap.data().role || "user",
                   },
-                  { merge: true }
+                  { merge: true },
                 );
 
-                // ✅ Verificar isMounted después de setDoc
+                // Verificar isMounted después de setDoc
                 if (!isMounted) return;
 
                 setCurrentUser(user);
                 setAuthError(null);
-                logger.event('user_authenticated', { 
-                  uid: user.uid, 
-                  role: allowlistSnap.data().role 
-                });
               } else {
                 // Usuario NO autorizado
                 const errorMsg = `Acceso denegado: ${user.email} no autorizado.`;
-                logger.warn('Usuario no autorizado intentó acceder', { 
-                  email: user.email 
+                logger.warn("Usuario no autorizado intentó acceder", {
+                  email: user.email,
                 });
-                
+
                 toast.error(errorMsg);
-                
-                // ✅ MEJORA 7: Manejo de errores en signOut
+
+                // Manejo de errores en signOut
                 try {
                   await signOut(auth);
                 } catch (signOutError) {
-                  logger.error('Error al hacer signOut de usuario no autorizado', signOutError);
+                  logger.error(
+                    "Error al hacer signOut de usuario no autorizado",
+                    signOutError,
+                  );
                   // No mostrar toast adicional para evitar confundir al usuario
                 }
 
-                // ✅ Verificar isMounted después de signOut
+                // Verificar isMounted después de signOut
                 if (!isMounted) return;
-                
+
                 setCurrentUser(null);
                 setAuthError(errorMsg);
               }
             }
           } else {
-            // ✅ Usuario no autenticado (logout o nunca logueado)
-            logger.info('Usuario no autenticado');
+            // Usuario no autenticado (logout o nunca logueado)
+            logger.info("Usuario no autenticado");
             if (!isMounted) return;
             setCurrentUser(null);
             setAuthError(null);
           }
         } catch (error) {
-          // ✅ MEJORA 8: Manejo robusto de errores
+          // Manejo robusto de errores
           logger.error("Error en onAuthStateChanged", error);
-          
+
           if (!isMounted) return;
-          
+
           const errorMsg = "Error al verificar permisos.";
           setAuthError(errorMsg);
           toast.error(errorMsg);
 
-          // ✅ Intentar logout seguro en caso de error
+          // Intentar logout seguro en caso de error
           try {
             await signOut(auth);
           } catch (signOutError) {
-            logger.error('Error al hacer signOut después de error de permisos', signOutError);
+            logger.error(
+              "Error al hacer signOut después de error de permisos",
+              signOutError,
+            );
           }
 
           if (!isMounted) return;
           setCurrentUser(null);
         } finally {
-          // ✅ MEJORA 9: Siempre marcar como inicializado
-          // ANTES: setLoading(false) solo se ejecutaba en el happy path
-          // AHORA: setInitialized(false) se ejecuta SIEMPRE, incluso con errores
+          // AsetInitialized(false) se ejecuta SIEMPRE, incluso con errores
           if (isMounted) {
             setInitialized(true);
-            logger.info('Autenticación inicializada');
+            logger.info("Autenticación inicializada");
           }
         }
       });
+
+      // No bloqueamos la interfaz esperando la respuesta del redirect.
+      try {
+        console.log(
+          "🔄 [AUTH] Verificando resultado de redirección (getRedirectResult)...",
+        );
+        const redirectResult = await getRedirectResult(auth);
+
+        if (isMounted && redirectResult?.user) {
+          logger.info("Redirect result procesado exitosamente", {
+            uid: redirectResult.user.uid,
+          });
+          console.log(
+            "[AUTH] Usuario recuperado de redirección:",
+            redirectResult.user.uid,
+          );
+          // No es necesario setear el usuario aquí manualmente,
+          // onAuthStateChanged se disparará automáticamente.
+        }
+      } catch (error) {
+        if (isMounted) {
+          logger.error("Error verificando resultado de redirección", error);
+          // Solo mostramos toast si es un error real y no una cancelación de usuario
+          if (
+            error.code !== "auth/popup-closed-by-user" &&
+            error.code !== "auth/cancelled-popup-request"
+          ) {
+            toast.error("Hubo un problema al completar el inicio de sesión.");
+          }
+        }
+      }
     };
 
-    // ✅ Ejecutar inicialización
+    // Ejecutar inicialización
     initializeAuth();
 
-    // ✅ MEJORA 10: Cleanup mejorado
-    // ANTES: return () => unsubscribe();
-    // AHORA: Marcamos como unmounted Y desuscribimos
+    // Marcamos como unmounted Y desuscribimos
     return () => {
-      logger.info('Limpiando AuthContext');
-      isMounted = false; // ✅ Previene cualquier setState después de esto
-      unsubscribe(); // ✅ Limpia el listener de Firebase
+      logger.info("Limpiando AuthContext");
+      isMounted = false; // Previene cualquier setState después de esto
+      unsubscribe(); // Limpia el listener de Firebase
     };
   }, []); // ✅ Array de dependencias vacío - solo corre una vez
 
   // ✅ MEJORA 11: No renderizar children hasta que esté inicializado
-  // ANTES: Renderizaba inmediatamente con loading=true
-  // AHORA: Muestra loading spinner hasta que Firebase esté listo
+  // Muestra loading spinner hasta que Firebase esté listo
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -278,20 +304,15 @@ export const AuthProvider = ({ children }) => {
     );
   }
 
-  // ✅ MEJORA 12: Value mejorado con más información útil
   const value = {
     currentUser,
-    loading,        // ✅ Para operaciones específicas (login, logout)
-    initialized,    // ✅ Para saber si Firebase está listo
-    authError,      // ✅ Para manejar errores de auth
+    loading, // Para operaciones específicas (login, logout)
+    initialized, // Para saber si Firebase está listo
+    authError, // Para manejar errores de auth
     login,
     logout,
     loginAsGuest,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

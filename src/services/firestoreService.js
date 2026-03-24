@@ -20,17 +20,10 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { app } from "../firebase/config"; // Importa la app de Firebase
-import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { v4 as uuidv4 } from "uuid";
 
 const storage = getStorage();
 const paymentsCollectionRef = collection(db, "payments");
-const functions = getFunctions(app); // Inicializa las funciones de Firebase
-
-if (location.hostname === "localhost") {
-  connectFunctionsEmulator(functions, "localhost", 5001);
-}
 
 /**
  * Llama a la función de Firebase Cloud para obtener el monto total de la IA.
@@ -57,7 +50,7 @@ export const getAITotal = async ({ firestorePath, submissionType }) => {
       const errorData = await response.json().catch(() => ({}));
       throw new AIAnalysisError(
         errorData.message || `Error del servidor: ${response.status}`,
-        response.status
+        response.status,
       );
     }
 
@@ -96,7 +89,7 @@ export const getPaymentsForDateRange = (startDate, endDate, callback) => {
     collection(db, "payments"),
     where("date", ">=", startDate),
     where("date", "<=", endDate),
-    orderBy("date", "asc")
+    orderBy("date", "asc"),
   );
 
   return onSnapshot(q, (snapshot) => {
@@ -203,7 +196,7 @@ export const downloadReceipt = (receiptUrl, storagePath) => {
 export const updatePaymentDate = async (paymentId, newDate) => {
   if (!paymentId) {
     throw new Error(
-      "ID de pago no proporcionado para la actualización de fecha."
+      "ID de pago no proporcionado para la actualización de fecha.",
     );
   }
   if (!(newDate instanceof Date)) {
@@ -217,7 +210,7 @@ export const updatePaymentDate = async (paymentId, newDate) => {
       updatedAt: serverTimestamp(), // Opcional: añade un timestamp de última actualización
     });
     console.log(
-      `Fecha de pago ${paymentId} actualizada a ${newDate.toISOString()}`
+      `Fecha de pago ${paymentId} actualizada a ${newDate.toISOString()}`,
     );
   } catch (error) {
     console.error("Error al actualizar la fecha del pago:", error);

@@ -1,22 +1,19 @@
 // src/App.jsx
-// ✨ VERSIÓN OPTIMIZADA CON CODE SPLITTING Y LAZY LOADING
 
 import { useContext, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthContext } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { Toaster } from "react-hot-toast";
 
-// 🚀 EAGER LOADING - Componentes críticos que necesitamos inmediatamente
+// EAGER LOADING - Componentes críticos que necesitamos inmediatamente
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import AppLayout from "./components/layout/AppLayout";
 import PageLoader from "./components/PageLoader";
 
-// 🎯 LAZY LOADING - Componentes secundarios que pueden cargarse bajo demanda
+// LAZY LOADING - Componentes secundarios que pueden cargarse bajo demanda
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
-const DocumentAnalyzerExample = lazy(() =>
-  import("./components/DocumentAnalyzerExample")
-);
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
@@ -38,82 +35,74 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          className: "",
-          duration: 5000,
-          style: {
-            background: "#363636",
-            color: "#fff",
-          },
-          success: {
-            duration: 3000,
-            theme: {
-              primary: "green",
-              secondary: "black",
+      <ThemeProvider>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            className: "",
+            duration: 5000,
+            style: {
+              background: "#363636",
+              color: "#fff",
             },
-          },
-        }}
-      />
-      <Routes>
-        {/* Ruta de Login - EAGER LOADING */}
-        <Route
-          path="/login"
-          element={currentUser ? <Navigate to="/" /> : <LoginPage />}
+            success: {
+              duration: 3000,
+              theme: {
+                primary: "green",
+                secondary: "black",
+              },
+            },
+          }}
         />
+        <Routes>
+          {/* Ruta de Login - EAGER LOADING */}
+          <Route
+            path="/login"
+            element={currentUser ? <Navigate to="/" /> : <LoginPage />}
+          />
 
-        {/* Ruta de Dashboard - EAGER LOADING (página principal) */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <DashboardPage />
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Ruta de Dashboard - EAGER LOADING (página principal) */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <DashboardPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Ruta de Reports - LAZY LOADING (página secundaria) */}
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Suspense
-                  fallback={<PageLoader message="Cargando reportes..." />}
-                >
-                  <ReportsPage />
-                </Suspense>
-              </AppLayout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Ruta de Reports - LAZY LOADING (página secundaria) */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Suspense
+                    fallback={<PageLoader message="Cargando reportes..." />}
+                  >
+                    <ReportsPage />
+                  </Suspense>
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Ruta raíz - Redirección */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Navigate to="/dashboard" />
-            </ProtectedRoute>
-          }
-        />
+          {/* Ruta raíz - Redirección */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/dashboard" />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Ruta de ejemplo - LAZY LOADING */}
-        <Route
-          path="/ejemplo-errores"
-          element={
-            <Suspense fallback={<PageLoader message="Cargando ejemplo..." />}>
-              <DocumentAnalyzerExample />
-            </Suspense>
-          }
-        />
-
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          {/* Catch-all redirect */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

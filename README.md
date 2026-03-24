@@ -2,6 +2,8 @@
 
 ![Logo de la Aplicación](public/logo.svg)
 
+[![Live Preview](https://img.shields.io/badge/Live_Preview-Ver_Demo-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://gestion-20.firebaseapp.com/)
+
 **Gestión 20 Negro** es una aplicación web interna y segura diseñada para el seguimiento y control de pagos semanales. Construida con React y Firebase, ofrece una solución robusta y en tiempo real para la gestión financiera de dos categorías de pagos: "PRONÓSTICOS" y "VÍA".
 
 La aplicación permite a los usuarios autorizados añadir, visualizar y gestionar pagos. Cada pago está asociado a un comprobante (imagen) que se almacena de forma segura. La interfaz es intuitiva y proporciona un resumen claro de los totales semanales.
@@ -56,16 +58,15 @@ npm install
 
 ### 4. Configurar Variables de Entorno
 
-1.  Copia el archivo de ejemplo `.env.example` y renómbralo a `.env`:
+1.  Copia el archivo de ejemplo `.env.example` y renómbralo a `.env.development`:
     ```bash
-    cp .env.example .env
+    cp .env.example .env.development
     ```
-2.  Abre el nuevo archivo `.env` y rellena las variables con las credenciales de tu proyecto de Firebase. Puedes encontrarlas en:
-    *Firebase Console > Project Settings > General > Your apps > Firebase SDK snippet > Config*.
+2.  Abre el nuevo archivo `.env.development` y rellena las variables con las credenciales de tu proyecto de Firebase.
 
 ### 5. Configuración de Firebase
 
-Asegúrate de haber configurado lo siguiente en tu [Consola de Firebase](https://console.firebase.google.com/):
+Asegúrate de haber configurado lo siguiente en tu Consola de Firebase:
 
 1.  **Authentication**:
     - Habilita el proveedor de inicio de sesión de **Google**.
@@ -83,6 +84,9 @@ Asegúrate de haber configurado lo siguiente en tu [Consola de Firebase](https:/
       ```
 3.  **Storage**:
     - Habilita Firebase Storage para poder subir los comprobantes.
+4.  **Cloud Functions**:
+    - Habilita las APIs necesarias en Google Cloud (Cloud Functions, Vertex AI, Artifact Registry).
+    - Despliega la función `getTotalAmount`
 
 ### 6. Ejecutar la Aplicación
 
@@ -119,3 +123,92 @@ Este proyecto está configurado para un despliegue sencillo en **Firebase Hostin
     ```
 
 ---
+
+## 📂 Estructura del Proyecto
+
+```text
+├── 📁 .firebase
+├── 📁 .idx
+│   └── 📄 dev.nix
+├── 📁 functions
+│   ├── 📄 .eslintrc.js
+│   ├── ⚙️ .gcloudignore
+│   ├── ⚙️ .gitignore
+│   ├── 📝 README.md
+│   ├── 📄 index.js
+│   ├── ⚙️ package-lock.json
+│   ├── ⚙️ package.json
+│   ├── 📄 pre-deploy.mjs
+│   ├── ⚙️ service-account-key example.json
+│   ├── ⚙️ service-account-key.json
+│   └── 📄 validation.js
+├── 📁 public
+│   ├── 🖼️ logo.jpg
+│   └── 🖼️ logo.svg
+├── 📁 src
+│   ├── 📁 components
+│   │   ├── 📁 dashboard
+│   │   │   ├── 📄 DashboardModals.jsx
+│   │   │   ├── 📄 PaymentSection.jsx
+│   │   │   └── 📄 index.js
+│   │   ├── 📁 layout
+│   │   │   ├── 📄 AppLayout.jsx
+│   │   │   ├── 📄 Layout.jsx
+│   │   │   └── 📄 MainLayout.jsx
+│   │   ├── 📁 navigation
+│   │   │   ├── 📄 Header.jsx
+│   │   │   ├── 📄 NotificationBanner.jsx
+│   │   │   └── 📄 WeekNavigator.jsx
+│   │   ├── 📁 payments
+│   │   │   ├── 📄 AddPaymentModal.jsx
+│   │   │   ├── 📄 AddStatementModal.jsx
+│   │   │   ├── 📄 ChangePaymentDateModal.jsx
+│   │   │   ├── 📄 PaymentDetailModal.jsx
+│   │   │   ├── 📄 PaymentList.jsx
+│   │   │   └── 📄 PaymentListItem.jsx
+│   │   ├── 📁 ui
+│   │   │   ├── 📄 Icons.jsx
+│   │   │   └── 📄 ThemeToggle.jsx
+│   │   ├── 📄 ErrorAlert.jsx
+│   │   ├── 📄 ErrorBoundary.jsx
+│   │   ├── 📄 ErrorFallback.jsx
+│   │   └── 📄 PageLoader.jsx
+│   ├── 📁 context
+│   │   ├── 📄 AuthContext.jsx
+│   │   └── 📄 ThemeContext.jsx
+│   ├── 📁 firebase
+│   │   └── 📄 config.js
+│   ├── 📁 hooks
+│   │   ├── 📄 useDashboardController.js
+│   │   ├── 📄 useErrorHandler.js
+│   │   ├── 📄 useNotifications.js
+│   │   ├── 📄 usePayments.jsx
+│   │   └── 📄 useReportsController.js
+│   ├── 📁 pages
+│   │   ├── 📄 DashboardPage.jsx
+│   │   ├── 📄 LoginPage.jsx
+│   │   └── 📄 ReportsPage.jsx
+│   ├── 📁 services
+│   │   ├── 📄 cloudFunctions.js
+│   │   └── 📄 firestoreService.js
+│   ├── 📁 utils
+│   │   ├── 📄 dateHelpers.jsx
+│   │   ├── 📄 errorHandler.js
+│   │   ├── 📄 errorSystem.js
+│   │   └── 📄 logger.js
+│   ├── 📄 App.jsx
+│   ├── 🎨 main.css
+│   └── 📄 main.jsx
+├── ⚙️ .env.example
+├── ⚙️ .firebaserc
+├── ⚙️ .gitignore
+├── ⚙️ .runtimeconfig.json
+├── 📝 README.md
+├── 📄 cors.js
+├── 📄 eslint.config.js
+├── ⚙️ firebase.json
+├── 🌐 index.html
+├── ⚙️ package-lock.json
+├── ⚙️ package.json
+└── 📄 vite.config.js
+```

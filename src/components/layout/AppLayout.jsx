@@ -3,9 +3,8 @@ import Header from "../navigation/Header";
 
 const AppLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-slate-100 font-sans">
+    <div className="min-h-screen bg-slate-100 dark:bg-dark-main transition-colors duration-300 font-sans">
       <Header />
-      {/* main content will be rendered here */}
       {children}
     </div>
   );

@@ -16,19 +16,6 @@ export const getStartOfWeek = (currentDate) => {
   return date;
 };
 
-export const getWeekDateRange = (startDate) => {
-  const endDate = new Date(startDate);
-  // Para que el rango VISUALIZADO sea de lunes a viernes, sumamos 4 días al lunes (startDate)
-  // Lunes (día 0 de nuestro cálculo a partir del lunes) + 4 días = Viernes
-  endDate.setDate(startDate.getDate() + 4);
-
-  const formatOptions = { month: "short", day: "numeric" };
-  return `${startDate.toLocaleDateString(
-    "es-MX",
-    formatOptions
-  )} - ${endDate.toLocaleDateString("es-MX", formatOptions)}`;
-};
-
 export const getWeekNumber = (d) => {
   // Copia la fecha para evitar mutaciones
   d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));

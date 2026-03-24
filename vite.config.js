@@ -7,6 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+  darkMode: "class",
   plugins: [react(), tailwindcss()],
 
   build: {
@@ -16,25 +17,18 @@ export default defineConfig({
 
     rollupOptions: {
       output: {
-        // 🎯 ESTRATEGIA ULTRA-CONSERVADORA
-        // Solo separamos lo que SABEMOS que es 100% seguro
         manualChunks: (id) => {
           if (id.includes("node_modules")) {
-            // ❌ NO SEPARAR NADA RELACIONADO CON REACT
-            // Dejar que Vite agrupe automáticamente todo React
-
-            // ✅ SOLO separar Firebase (grande y 100% independiente)
+            // SOLO separar Firebase (grande y 100% independiente)
             if (id.includes("firebase") || id.includes("@firebase")) {
               return "vendor-firebase";
             }
 
-            // ✅ SOLO separar Charts (lazy loaded, independiente)
+            // SOLO separar Charts (lazy loaded, independiente)
             if (id.includes("recharts")) {
               return "vendor-charts";
             }
-
             // TODO LO DEMÁS junto en vendor
-            // Incluye: React, React-DOM, React-Router, date-fns, toast, etc.
             return "vendor";
           }
         },
@@ -49,6 +43,10 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    headers: {
+      // Permite comunicación correcta con el popup de login
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
   },
 
   optimizeDeps: {

@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { HomeIcon, ChartBarIcon, LogoutIcon } from "../ui/Icons";
+import ThemeToggle from "../ui/ThemeToggle";
 
 const Header = () => {
   const { logout, currentUser } = useContext(AuthContext);
@@ -25,7 +26,7 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-blue-800 to-indigo-900 shadow-xl sticky top-0 z-30">
+    <header className="bg-gradient-to-r from-blue-800 to-indigo-900 dark:from-dark-surface dark:to-dark-surface dark:bg-dark-surface shadow-xl sticky top-0 z-30 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Lado Izquierdo: Logo y Título (Clickable to Dashboard) */}
@@ -66,6 +67,8 @@ const Header = () => {
 
           {/* Lado Derecho: Avatar de Usuario y Botón de Salir (Desktop) */}
           <div className="hidden md:flex items-center space-x-3">
+            {/* Toggle de Tema */}
+            <ThemeToggle className="mr-2" />
             <span className="text-sm font-medium text-white">
               {currentUser?.displayName}
             </span>
@@ -99,6 +102,8 @@ const Header = () => {
                 className="h-8 w-8 rounded-full mr-2"
               />
             )}
+            {/* Toggle de Tema en Móvil (visible junto al hamburger o dentro del menú, aquí lo ponemos fuera para acceso rápido) */}
+            <ThemeToggle className="mr-2 md:hidden" />
             <button
               onClick={toggleMobileMenu}
               className="inline-flex items-center justify-center p-2 rounded-md text-blue-200 hover:text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"

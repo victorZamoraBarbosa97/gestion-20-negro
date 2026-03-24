@@ -4,16 +4,16 @@
  */
 
 const LOG_LEVELS = {
-  DEBUG: 'debug',
-  INFO: 'info',
-  WARN: 'warn',
-  ERROR: 'error',
+  DEBUG: "debug",
+  INFO: "info",
+  WARN: "warn",
+  ERROR: "error",
 };
 
 class Logger {
   constructor() {
     this.environment = import.meta.env.MODE;
-    this.isDevelopment = this.environment === 'development';
+    this.isDevelopment = this.environment === "development";
   }
 
   /**
@@ -40,10 +40,10 @@ class Logger {
     // Ejemplos:
     // - Sentry.captureMessage(logEntry.message, { level: logEntry.level, extra: logEntry });
     // - fetch('/api/logs', { method: 'POST', body: JSON.stringify(logEntry) });
-    
+
     // Por ahora, solo enviamos errores en producción a console
     if (!this.isDevelopment && logEntry.level === LOG_LEVELS.ERROR) {
-      console.error('Production Error:', logEntry);
+      console.error("Production Error:", logEntry);
     }
   }
 
@@ -52,8 +52,7 @@ class Logger {
    */
   debug(message, meta = {}) {
     if (!this.isDevelopment) return;
-    
-    const logEntry = this.createLogEntry(LOG_LEVELS.DEBUG, message, meta);
+
     console.debug(`🔍 [DEBUG] ${message}`, meta);
   }
 
@@ -62,11 +61,11 @@ class Logger {
    */
   info(message, meta = {}) {
     const logEntry = this.createLogEntry(LOG_LEVELS.INFO, message, meta);
-    
+
     if (this.isDevelopment) {
-      console.info(`ℹ️ [INFO] ${message}`, meta);
+      // console.info(`ℹ️ [INFO] ${message}`, meta);
     }
-    
+
     this.sendToExternalService(logEntry);
   }
 
@@ -75,7 +74,7 @@ class Logger {
    */
   warn(message, meta = {}) {
     const logEntry = this.createLogEntry(LOG_LEVELS.WARN, message, meta);
-    
+
     console.warn(`⚠️ [WARN] ${message}`, meta);
     this.sendToExternalService(logEntry);
   }
@@ -84,13 +83,15 @@ class Logger {
    * Log de nivel ERROR
    */
   error(message, error, meta = {}) {
-    const errorDetails = error ? {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code,
-      ...(error.response && { response: error.response }),
-    } : {};
+    const errorDetails = error
+      ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          code: error.code,
+          ...(error.response && { response: error.response }),
+        }
+      : {};
 
     const logEntry = this.createLogEntry(LOG_LEVELS.ERROR, message, {
       ...meta,
@@ -103,39 +104,6 @@ class Logger {
     });
 
     this.sendToExternalService(logEntry);
-  }
-
-  /**
-   * Log de eventos de usuario (analytics)
-   */
-  event(eventName, properties = {}) {
-    const logEntry = this.createLogEntry(LOG_LEVELS.INFO, `Event: ${eventName}`, {
-      eventName,
-      properties,
-    });
-
-    if (this.isDevelopment) {
-      console.log(`📊 [EVENT] ${eventName}`, properties);
-    }
-
-    // Aquí podrías integrar con Google Analytics, Mixpanel, etc.
-    // gtag('event', eventName, properties);
-  }
-
-  /**
-   * Log de performance (métricas de rendimiento)
-   */
-  performance(metricName, value, meta = {}) {
-    const logEntry = this.createLogEntry(LOG_LEVELS.INFO, `Performance: ${metricName}`, {
-      metricName,
-      value,
-      unit: 'ms',
-      ...meta,
-    });
-
-    if (this.isDevelopment) {
-      console.log(`⚡ [PERFORMANCE] ${metricName}: ${value}ms`, meta);
-    }
   }
 }
 

@@ -63,23 +63,23 @@ const ChangePaymentDateModal = ({
       onClick={handleClose}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-sm m-4"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm m-4 transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            <h3 className="text-xl font-bold text-slate-800">
+          <div className="p-6 border-b border-slate-100 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
               Cambiar Fecha del Pago
             </h3>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
               Selecciona la nueva fecha para este pago.
             </p>
           </div>
-          <div className="px-6 pb-6 space-y-4">
+          <div className="p-6 space-y-4">
             <div>
               <label
                 htmlFor="new-payment-date"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1"
               >
                 Nueva Fecha
               </label>
@@ -88,17 +88,17 @@ const ChangePaymentDateModal = ({
                 id="new-payment-date"
                 value={newDate}
                 onChange={(e) => setNewDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 [color-scheme:light] dark:[color-scheme:dark]"
                 required
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
-          <div className="p-4 bg-slate-50 rounded-b-xl flex justify-end items-center space-x-3">
+          <div className="p-4 bg-slate-50 dark:bg-gray-700/50 rounded-b-xl flex justify-end items-center space-x-3 border-t border-slate-100 dark:border-gray-700">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm text-slate-700 bg-slate-200 hover:bg-slate-300 rounded-lg font-semibold"
+              className="px-4 py-2 text-sm text-slate-700 dark:text-gray-200 bg-slate-200 dark:bg-gray-600 hover:bg-slate-300 dark:hover:bg-gray-500 rounded-lg font-semibold transition-colors"
             >
               Cancelar
             </button>
