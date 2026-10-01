@@ -78,9 +78,12 @@ const VALIDATION_RULES = {
     ],
     ALLOWED_EXTENSIONS: ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
   },
-  RATE_LIMIT: {
-    MAX_REQUESTS_PER_MINUTE: 60,
-    MAX_REQUESTS_PER_HOUR: 1000,
+  // Límites por minuto/hora según el tier del usuario autenticado.
+  // "guest" = invitado anónimo (demo pública), "user"/"admin" = allowlist.
+  RATE_LIMIT_TIERS: {
+    guest: { MAX_REQUESTS_PER_MINUTE: 5, MAX_REQUESTS_PER_HOUR: 15 },
+    user: { MAX_REQUESTS_PER_MINUTE: 20, MAX_REQUESTS_PER_HOUR: 200 },
+    admin: { MAX_REQUESTS_PER_MINUTE: 60, MAX_REQUESTS_PER_HOUR: 1000 },
   },
 };
 
@@ -385,17 +388,24 @@ export function validateMethod(method, allowedMethods = ['POST']) {
 }
 
 // ============================================================================
-// RATE LIMITING (Simpleimplementación en memoria)
+// RATE LIMITING (implementación en memoria, por instancia)
 // ============================================================================
 
-// Nota: En producción, usar Redis o similar
+// Nota: al vivir en memoria del proceso, el límite no se comparte entre
+// instancias de Cloud Run ni sobrevive a un cold start. Es una mitigación
+// best-effort, no una garantía dura; la defensa real contra abuso es exigir
+// un ID token válido (ver auth.js) antes de llegar aquí.
 const requestCounts = new Map();
 
 /**
- * Verifica el rate limit para una IP
+ * Verifica el rate limit para una clave (normalmente `${uid}-${identifier}`),
+ * usando los límites del tier del usuario (guest/user/admin).
  */
-export function checkRateLimit(ip, identifier = 'default') {
-  const key = `${ip}-${identifier}`;
+export function checkRateLimit(key, tier = 'guest') {
+  const limits =
+    VALIDATION_RULES.RATE_LIMIT_TIERS[tier] ||
+    VALIDATION_RULES.RATE_LIMIT_TIERS.guest;
+
   const now = Date.now();
   const oneMinuteAgo = now - 60 * 1000;
   const oneHourAgo = now - 60 * 60 * 1000;
@@ -414,16 +424,16 @@ export function checkRateLimit(ip, identifier = 'default') {
   // Contar requests en el último minuto
   const requestsInLastMinute = recentTimestamps.filter(ts => ts > oneMinuteAgo).length;
 
-  if (requestsInLastMinute >= VALIDATION_RULES.RATE_LIMIT.MAX_REQUESTS_PER_MINUTE) {
+  if (requestsInLastMinute >= limits.MAX_REQUESTS_PER_MINUTE) {
     throw new RateLimitError(
-      `Límite de ${VALIDATION_RULES.RATE_LIMIT.MAX_REQUESTS_PER_MINUTE} requests por minuto excedido`
+      `Límite de ${limits.MAX_REQUESTS_PER_MINUTE} requests por minuto excedido`
     );
   }
 
   // Contar requests en la última hora
-  if (recentTimestamps.length >= VALIDATION_RULES.RATE_LIMIT.MAX_REQUESTS_PER_HOUR) {
+  if (recentTimestamps.length >= limits.MAX_REQUESTS_PER_HOUR) {
     throw new RateLimitError(
-      `Límite de ${VALIDATION_RULES.RATE_LIMIT.MAX_REQUESTS_PER_HOUR} requests por hora excedido`
+      `Límite de ${limits.MAX_REQUESTS_PER_HOUR} requests por hora excedido`
     );
   }
 

@@ -36,27 +36,21 @@ const useDashboardController = () => {
   const {
     isLoading,
     pronosticosPayments,
-    viaPayments,
     pronosticosTotal,
-    viaTotal,
     handleDeletePayment,
     handleUpdatePaymentDate,
     handleConfirmPayment,
     handleInitialUpload,
     handleDownloadReceipt,
     hasPronosticosStatement,
-    hasViaStatement,
     pronosticosStatement,
-    viaStatement,
     payments, // Todos los pagos planos para notificaciones
   } = paymentsData;
 
   const { notifications } = useNotifications({
     payments,
     pronosticosStatement,
-    viaStatement,
     pronosticosTotal,
-    viaTotal,
     currentWeekStartDate,
   });
 
@@ -214,13 +208,9 @@ const useDashboardController = () => {
 
     // Datos
     pronosticosPayments,
-    viaPayments,
     pronosticosTotal,
-    viaTotal,
     pronosticosStatement,
-    viaStatement,
     hasPronosticosStatement,
-    hasViaStatement,
 
     // Estado Modales
     modalsState: {
@@ -255,13 +245,10 @@ const useDashboardController = () => {
 
       // Helpers específicos pre-configurados
       openPronosticosAdd: () => handleOpenAddModal("PRONOSTICOS"),
-      openViaAdd: () => handleOpenAddModal("VIA"),
       openPronosticosStatementAdd: () =>
         handleOpenStatementModal("PRONOSTICOS"),
-      openViaStatementAdd: () => handleOpenStatementModal("VIA"),
       viewPronosticosStatement: () =>
         handleViewStatementClick(pronosticosStatement),
-      viewViaStatement: () => handleViewStatementClick(viaStatement),
     },
   };
 };

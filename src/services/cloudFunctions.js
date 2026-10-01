@@ -1,10 +1,10 @@
 /**
  * Servicio para interactuar con Google Cloud Functions
- * Ahora con manejo robusto de errores
+ * Único punto de entrada para llamar a getTotalAmount (análisis con Gemini)
  */
-import { React } from "react";
 import { logger } from "../utils/logger";
 import { AppError, handleHTTPError } from "../utils/errorHandler";
+import { auth } from "../firebase/config";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -13,22 +13,37 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
  *
  * @param {string} firestorePath - Ruta del documento en Firestore
  * @param {'STATEMENT' | 'PAYMENT'} submissionType - Tipo de documento
- * @returns {Promise<{total: string}>}
- * @throws {AppError} Si la petición falla
+ * @returns {Promise<{total: string, date: string | null}>} Monto detectado
+ *   (string numérico) y fecha detectada en formato YYYY-MM-DD, o null si la
+ *   IA no pudo determinarla.
+ * @throws {AppError} Si la petición falla o la IA devuelve un monto inválido
  */
 export async function getTotalAmount(firestorePath, submissionType) {
   const startTime = performance.now();
 
   try {
+    if (!auth.currentUser) {
+      throw new AppError(
+        "Debes iniciar sesión (o entrar como invitado) para usar el análisis con IA.",
+        "UNAUTHENTICATED",
+        401,
+      );
+    }
+
     logger.info("Iniciando análisis de documento", {
       firestorePath,
       submissionType,
     });
 
+    // El backend exige un ID token de Firebase (acepta invitados anónimos)
+    // para bloquear llamadas directas a la URL fuera de esta app.
+    const idToken = await auth.currentUser.getIdToken();
+
     const response = await fetch(`${API_BASE_URL}/getTotalAmount`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
       },
       body: JSON.stringify({
         firestorePath,
@@ -55,18 +70,31 @@ export async function getTotalAmount(firestorePath, submissionType) {
 
     const data = await response.json();
 
-    const duration = performance.now() - startTime;
-    logger.performance("cloud_function_call", duration, {
-      submissionType,
-      success: true,
-    });
+    // Validar que el monto devuelto por la IA sea un número válido
+    const parsedTotal = parseFloat(data.total);
+    if (isNaN(parsedTotal) || parsedTotal < 0) {
+      throw new AppError(
+        "La IA devolvió un monto inválido",
+        "INVALID_AI_RESPONSE",
+        502,
+      );
+    }
 
+    // La fecha es opcional: si la IA no la detectó o vino en un formato
+    // raro, simplemente la ignoramos (el usuario la captura a mano).
+    const detectedDate =
+      typeof data.date === "string" && !isNaN(new Date(data.date).getTime())
+        ? data.date
+        : null;
+
+    const duration = performance.now() - startTime;
     logger.info("Análisis completado exitosamente", {
       total: data.total,
+      date: detectedDate,
       duration: `${duration}ms`,
     });
 
-    return data;
+    return { total: data.total, date: detectedDate };
   } catch (error) {
     const duration = performance.now() - startTime;
 
@@ -99,65 +127,4 @@ export async function getTotalAmount(firestorePath, submissionType) {
   }
 }
 
-/**
- * Hook de React para usar el servicio getTotalAmount con manejo de errores integrado
- *
- * @example
- * const { analyze, loading, error, result } = useGetTotalAmount();
- *
- * const handleAnalyze = async () => {
- *   try {
- *     await analyze('submissions/abc123', 'STATEMENT');
- *   } catch (error) {
- *     // Error ya está en el estado
- *   }
- * };
- */
-export function useGetTotalAmount() {
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState(null);
-  const [result, setResult] = React.useState(null);
-
-  const analyze = async (firestorePath, submissionType) => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const data = await getTotalAmount(firestorePath, submissionType);
-      setResult(data);
-
-      logger.event("document_analyzed", {
-        submissionType,
-        success: true,
-      });
-
-      return data;
-    } catch (err) {
-      setError(err.message);
-
-      logger.event("document_analysis_failed", {
-        submissionType,
-        errorCode: err.code,
-      });
-
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const reset = () => {
-    setError(null);
-    setResult(null);
-  };
-
-  return { analyze, loading, error, result, reset };
-}
-
-// Export para uso directo sin hook
-export const cloudFunctionsAPI = {
-  getTotalAmount,
-};
-
-export default cloudFunctionsAPI;
+export default { getTotalAmount };

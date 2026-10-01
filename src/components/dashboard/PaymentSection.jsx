@@ -14,8 +14,7 @@ const PaymentSection = ({
   onAddPayment,
   onViewStatement,
   onAddStatement,
-  type, // "PRONOSTICOS" | "VIA"
-  colorTheme = "orange", // "orange" | "blue"
+  colorTheme = "orange",
 }) => {
   // Definición de colores dinámicos basados en el tema
   const colors = {
@@ -104,7 +103,6 @@ const PaymentSection = ({
           payments={payments}
           isLoading={isLoading}
           onPaymentClick={onPaymentClick}
-          type={type}
         />
       </div>
     </div>

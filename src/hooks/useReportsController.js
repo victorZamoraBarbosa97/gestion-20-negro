@@ -18,7 +18,6 @@ import usePayments from "./usePayments";
 // Colores para el gráfico, usando las claves exactas que esperamos en los datos
 const COLORS = {
   PRONÓSTICOS: "#EA580C", // orange-600
-  VÍA: "#2563EB", // blue-600
 };
 
 // Opciones para date-fns para que la semana empiece en Jueves (4)
@@ -61,10 +60,7 @@ const useReportsController = () => {
   }, [customEndDate, displayMonth]);
 
   // --- OBTENCIÓN DE DATOS ---
-  const { payments, isLoading, pronosticosTotal, viaTotal } = usePayments(
-    finalStartDate,
-    finalEndDate,
-  );
+  const { payments, isLoading } = usePayments(finalStartDate, finalEndDate);
 
   // --- PROCESAMIENTO DE DATOS PARA GRÁFICOS (MEMOIZADO) ---
   const weeklyChartData = useMemo(() => {
@@ -90,7 +86,6 @@ const useReportsController = () => {
       dataMap.set(mapKey, {
         name: displayLabel,
         PRONÓSTICOS: 0,
-        VÍA: 0,
         sortKey: weekNumber,
       });
       currentWeekStart = addWeeks(currentWeekStart, 1);
@@ -99,7 +94,7 @@ const useReportsController = () => {
     payments.forEach((payment) => {
       let normalizedType = payment.type?.toUpperCase();
       if (normalizedType === "PRONOSTICOS") normalizedType = "PRONÓSTICOS";
-      if (normalizedType !== "PRONÓSTICOS" && normalizedType !== "VÍA") return;
+      if (normalizedType !== "PRONÓSTICOS") return;
 
       const paymentWeekStart = startOfWeek(payment.date, DATE_FNS_OPTIONS);
       const paymentWeekKey = format(paymentWeekStart, "yyyy-MM-dd");
@@ -112,18 +107,6 @@ const useReportsController = () => {
 
     return Array.from(dataMap.values()).sort((a, b) => a.sortKey - b.sortKey);
   }, [payments, finalStartDate, finalEndDate]);
-
-  const pieChartData = useMemo(
-    () => [
-      {
-        name: "PRONÓSTICOS",
-        value: pronosticosTotal,
-        color: COLORS["PRONÓSTICOS"],
-      },
-      { name: "VÍA", value: viaTotal, color: COLORS["VÍA"] },
-    ],
-    [pronosticosTotal, viaTotal],
-  );
 
   // --- HANDLERS (MEMOIZADOS CON useCallback) ---
   const handleMonthChange = useCallback(
@@ -159,7 +142,6 @@ const useReportsController = () => {
     isLoading,
     chartData: {
       weekly: weeklyChartData,
-      pie: pieChartData,
       colors: COLORS,
     },
     filters: {

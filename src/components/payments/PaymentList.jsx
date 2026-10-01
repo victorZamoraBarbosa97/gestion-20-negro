@@ -1,15 +1,10 @@
 // src/components/payments/PaymentList.jsx
 // ✨ VERSIÓN OPTIMIZADA CON REACT.MEMO
 
-import React, { useMemo, useCallback } from "react";
+import React, { useCallback } from "react";
 import PaymentListItem from "./PaymentListItem";
 
-const PaymentList = ({ payments, isLoading, onPaymentClick, type }) => {
-  // Solo se recalcula si 'type' cambia
-  const typeName = useMemo(() => {
-    return type === "PRONOSTICOS" ? "pronósticos" : "VIA";
-  }, [type]);
-
+const PaymentList = ({ payments, isLoading, onPaymentClick }) => {
   const handleItemClick = useCallback(
     (payment) => {
       onPaymentClick(payment);
@@ -17,10 +12,7 @@ const PaymentList = ({ payments, isLoading, onPaymentClick, type }) => {
     [onPaymentClick],
   );
 
-  // Memoizar el mensaje "sin pagos"
-  const emptyMessage = useMemo(() => {
-    return `No hay pagos de ${typeName} esta semana.`;
-  }, [typeName]);
+  const emptyMessage = "No hay pagos de pronósticos esta semana.";
 
   return (
     <div className="space-y-2 pt-2 border-t border-slate-200">
@@ -49,11 +41,6 @@ export default React.memo(PaymentList, (prevProps, nextProps) => {
 
   // Si loading state cambió, debe re-renderizar
   if (prevProps.isLoading !== nextProps.isLoading) {
-    return false;
-  }
-
-  // Si type cambió, debe re-renderizar
-  if (prevProps.type !== nextProps.type) {
     return false;
   }
 

@@ -41,6 +41,21 @@ export const AuthProvider = ({ children }) => {
   // useRef cambia instantáneamente sin esperar al re-render de React
   const isOperating = useRef(false);
 
+  // Configura la persistencia local de forma "best-effort": requiere IndexedDB,
+  // que algunos navegadores/contextos móviles restringen (modo privado en
+  // Safari iOS, navegadores embebidos de apps, o cargar la app por http:// en
+  // vez de https/localhost). Si falla, el login sigue adelante igual (solo no
+  // persistirá la sesión tras cerrar el navegador), en vez de abortar todo.
+  const ensureLocalPersistence = useCallback(async () => {
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (error) {
+      logger.warn("No se pudo configurar persistencia local, se continúa sin ella", {
+        error: error.message,
+      });
+    }
+  }, []);
+
   // MEJORA 2: Login con mejor manejo de errores
   const login = useCallback(async () => {
     if (isOperating.current) return; // 🔒 Bloqueo inmediato
@@ -51,7 +66,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       console.log("🔐 [AUTH] Iniciando proceso de login...");
-      await setPersistence(auth, browserLocalPersistence);
+      await ensureLocalPersistence();
 
       // ESTRATEGIA HÍBRIDA ROBUSTA
       // Móvil: Redirect (Obligatorio por UX y limitaciones de SO)
@@ -71,14 +86,18 @@ export const AuthProvider = ({ children }) => {
       console.error("❌ [AUTH ERROR] Falló el login:", error);
       const errorMessage = "Error al iniciar el inicio de sesión.";
       setAuthError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(
+        import.meta.env.DEV
+          ? `${errorMessage} [${error.code || error.message}]`
+          : errorMessage,
+      );
       logger.error("Error en el proceso de login", error);
     } finally {
       // Siempre limpiamos loading, incluso si hay error
       setLoading(false);
       isOperating.current = false; // 🔓 Liberar bloqueo
     }
-  }, []);
+  }, [ensureLocalPersistence]);
 
   const loginAsGuest = useCallback(async () => {
     if (isOperating.current) return; // 🔒 Bloqueo inmediato
@@ -88,19 +107,23 @@ export const AuthProvider = ({ children }) => {
     setAuthError(null);
 
     try {
-      await setPersistence(auth, browserLocalPersistence);
+      await ensureLocalPersistence();
       await signInAnonymously(auth);
       toast.success("Has iniciado sesión como invitado.");
     } catch (error) {
       const errorMessage = "No se pudo iniciar sesión como invitado.";
       setAuthError(errorMessage);
-      toast.error(errorMessage);
+      toast.error(
+        import.meta.env.DEV
+          ? `${errorMessage} [${error.code || error.message}]`
+          : errorMessage,
+      );
       logger.error("Error en signInAnonymously", error);
     } finally {
       setLoading(false);
       isOperating.current = false; // 🔓 Liberar bloqueo
     }
-  }, []);
+  }, [ensureLocalPersistence]);
 
   const logout = useCallback(async () => {
     if (isOperating.current) return; // 🔒 Bloqueo inmediato

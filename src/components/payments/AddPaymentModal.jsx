@@ -1,5 +1,8 @@
 // src/components/payments/AddPaymentModal.jsx
 import { useState, useEffect } from "react";
+import ReceiptCapture from "./ReceiptCapture";
+
+const todayAsDateInputValue = () => new Date().toISOString().slice(0, 10);
 
 const AddPaymentModal = ({
   isOpen,
@@ -12,6 +15,7 @@ const AddPaymentModal = ({
   const [modalStep, setModalStep] = useState("initial"); // 'initial', 'review', 'manual'
   const [amount, setAmount] = useState("");
   const [displayAmount, setDisplayAmount] = useState("");
+  const [date, setDate] = useState(todayAsDateInputValue());
   const [receiptFile, setReceiptFile] = useState(null);
   const [paymentId, setPaymentId] = useState(null); // Guarda el ID entre pasos
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +27,7 @@ const AddPaymentModal = ({
       setModalStep("initial");
       setAmount("");
       setDisplayAmount("");
+      setDate(todayAsDateInputValue());
       setReceiptFile(null);
       setPaymentId(null);
       setError("");
@@ -65,6 +70,7 @@ const AddPaymentModal = ({
         setPaymentId(result.paymentId);
         setAmount(result.aiAmount.toString());
         setDisplayAmount(Number(result.aiAmount).toLocaleString("es-MX"));
+        if (result.aiDate) setDate(result.aiDate);
         setModalStep("review");
       } else if (result.paymentId) {
         // IA FALLO: Pasa al paso de entrada manual
@@ -76,6 +82,7 @@ const AddPaymentModal = ({
       await onConfirmPayment({
         paymentId,
         amount,
+        date,
         submissionType: "PAYMENT",
       });
       onClose(); // Cierra el modal al finalizar con éxito
@@ -91,13 +98,13 @@ const AddPaymentModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md m-4 transition-colors duration-200"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md m-4 max-h-[90vh] overflow-y-auto transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
           <div className="p-6 border-b border-slate-100 dark:border-gray-700">
             <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-              Añadir Pago de {defaultType === "VIA" ? "VIA" : "Pronósticos"}
+              Añadir Pago de Pronósticos
             </h3>
             <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
               {modalStep === "initial" &&
@@ -135,21 +142,28 @@ const AddPaymentModal = ({
                 </div>
               </div>
             )}
-            {modalStep === "initial" && (
+            {(modalStep === "review" || modalStep === "manual") && (
               <div>
                 <label
-                  htmlFor="receipt"
+                  htmlFor="payment-date"
                   className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1"
                 >
-                  Comprobante
+                  Fecha del comprobante
                 </label>
                 <input
-                  type="file"
-                  id="receipt"
-                  onChange={(e) => setReceiptFile(e.target.files[0])}
-                  className="w-full text-sm text-slate-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 dark:file:bg-gray-700 file:text-slate-700 dark:file:text-gray-200 hover:file:bg-slate-100 dark:hover:file:bg-gray-600"
+                  type="date"
+                  id="payment-date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  max={todayAsDateInputValue()}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 [color-scheme:light] dark:[color-scheme:dark]"
                   required
                 />
+              </div>
+            )}
+            {modalStep === "initial" && (
+              <div>
+                <ReceiptCapture onFileReady={setReceiptFile} label="Comprobante" />
               </div>
             )}
             {error && <p className="text-sm text-red-600">{error}</p>}

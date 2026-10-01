@@ -1,7 +1,7 @@
 import functions from "@google-cloud/functions-framework";
 import { Firestore } from "@google-cloud/firestore";
 import { Storage } from "@google-cloud/storage";
-import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleAuth } from "google-auth-library";
 import { existsSync } from "fs";
 
 // ✨ NUEVO: Importar sistema de validación
@@ -18,6 +18,7 @@ import {
   validateFileType,
   VALIDATION_RULES,
 } from "./validation.js";
+import { verifyAuthHeader, resolveUserTier } from "./auth.js";
 
 // ============================================================================
 // CONFIGURACIÓN
@@ -28,7 +29,7 @@ const CONFIG = {
   LOCATION: "us-central1",
   KEY_FILENAME: "service-account-key.json",
   STORAGE_BUCKET: "gestion-20.firebasestorage.app",
-  MODEL: "gemini-2.0-flash",
+  MODEL: "gemini-2.5-flash",
 };
 
 const SUBMISSION_TYPES = {
@@ -38,9 +39,26 @@ const SUBMISSION_TYPES = {
 
 const PROMPTS = {
   [SUBMISSION_TYPES.STATEMENT]:
-    "Eres un asistente experto en análisis financiero. Tu única tarea es analizar la imagen de este estado de cuenta. Extrae el MONTO TOTAL A PAGAR. Devuelve exclusivamente el valor numérico, usando un punto como separador decimal y sin comas para los miles. No incluyas símbolos de moneda ni texto adicional. Ejemplo de respuesta correcta: 1234.56",
+    "Eres un asistente experto en análisis financiero. Analiza la imagen de este estado de cuenta y extrae: (1) el MONTO TOTAL A PAGAR, como texto numérico con punto decimal y sin comas de miles (ej. '1234.56'); (2) la FECHA del estado de cuenta (la fecha de corte o emisión que aparezca impresa), en formato YYYY-MM-DD. Si no puedes determinar alguno de los dos con certeza, usa null en ese campo.",
   [SUBMISSION_TYPES.PAYMENT]:
-    "Eres un asistente experto en análisis financiero. Tu única tarea es analizar la imagen de este recibo o comprobante de pago. Extrae el MONTO TOTAL PAGADO. Devuelve exclusivamente el valor numérico, usando un punto como separador decimal y sin comas para los miles. No incluyas símbolos de moneda ni texto adicional. Ejemplo de respuesta correcta: 500.00",
+    "Eres un asistente experto en análisis financiero. Analiza la imagen de este recibo o comprobante de pago y extrae: (1) el MONTO TOTAL PAGADO, como texto numérico con punto decimal y sin comas de miles (ej. '500.00'); (2) la FECHA en que se realizó el pago (la que aparezca impresa en el comprobante), en formato YYYY-MM-DD. Si no puedes determinar alguno de los dos con certeza, usa null en ese campo.",
+};
+
+const EXTRACTION_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    total: {
+      type: "string",
+      nullable: true,
+      description: "Monto total como texto numérico (ej. '1234.56'), o null si no se puede determinar.",
+    },
+    date: {
+      type: "string",
+      nullable: true,
+      description: "Fecha en formato YYYY-MM-DD, o null si no se puede determinar.",
+    },
+  },
+  required: ["total", "date"],
 };
 
 const MIME_TYPES = {
@@ -71,28 +89,28 @@ const getClientConfig = () => {
   }
 };
 
-const getVertexConfig = () => {
-  if (isProduction) {
-    return {
-      project: CONFIG.PROJECT_ID,
-      location: CONFIG.LOCATION,
-    };
-  } else {
-    return {
-      project: CONFIG.PROJECT_ID,
-      location: CONFIG.LOCATION,
-      keyFilename: CONFIG.KEY_FILENAME,
-    };
-  }
-};
-
 // ============================================================================
 // INICIALIZACIÓN DE CLIENTES
 // ============================================================================
 
 const firestore = new Firestore(getClientConfig());
 const storage = new Storage(getClientConfig());
-const vertexAI = new VertexAI(getVertexConfig());
+
+// ✨ Llamamos a Vertex AI por REST directo (fetch) en vez del SDK
+// @google-cloud/vertexai: esa versión del SDK manda "generation_config"
+// (snake_case) en el body, pero la API espera "generationConfig"
+// (camelCase) — lo ignora en silencio y por eso responseSchema nunca
+// aplicaba. google-auth-library solo nos da el access token.
+const googleAuth = new GoogleAuth({
+  ...(isProduction ? {} : { keyFilename: CONFIG.KEY_FILENAME }),
+  scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+});
+
+async function getVertexAccessToken() {
+  const client = await googleAuth.getClient();
+  const { token } = await client.getAccessToken();
+  return token;
+}
 
 // ============================================================================
 // UTILIDADES
@@ -212,13 +230,9 @@ async function getStoragePathFromFirestore(firestorePath) {
 async function analyzeImageWithGemini(gcsUri, submissionType) {
   const prompt = PROMPTS[submissionType] || PROMPTS[SUBMISSION_TYPES.PAYMENT];
   
-  logger.info("Preparando análisis con Gemini", { 
+  logger.info("Preparando análisis con Gemini", {
     submissionType,
-    model: CONFIG.MODEL 
-  });
-
-  const generativeModel = vertexAI.getGenerativeModel({
-    model: CONFIG.MODEL,
+    model: CONFIG.MODEL
   });
 
   let imagePart;
@@ -236,34 +250,79 @@ async function analyzeImageWithGemini(gcsUri, submissionType) {
         parts: [imagePart, { text: prompt }],
       },
     ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: EXTRACTION_RESPONSE_SCHEMA,
+    },
   };
 
   logger.info("Enviando solicitud a Gemini AI");
-  
-  let result;
+
+  let responseJson;
   try {
-    result = await generativeModel.generateContent(requestPayload);
+    const accessToken = await getVertexAccessToken();
+    const endpoint =
+      `https://${CONFIG.LOCATION}-aiplatform.googleapis.com/v1/projects/${CONFIG.PROJECT_ID}` +
+      `/locations/${CONFIG.LOCATION}/publishers/google/models/${CONFIG.MODEL}:generateContent`;
+
+    const httpResponse = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestPayload),
+    });
+
+    responseJson = await httpResponse.json();
+
+    if (!httpResponse.ok) {
+      logger.error('Error en Gemini AI', { status: httpResponse.status, responseJson });
+      throw new Error('Error al analizar la imagen con IA. Por favor, intenta de nuevo.');
+    }
   } catch (error) {
+    if (error.message === 'Error al analizar la imagen con IA. Por favor, intenta de nuevo.') {
+      throw error;
+    }
     logger.error('Error en Gemini AI', error);
     throw new Error('Error al analizar la imagen con IA. Por favor, intenta de nuevo.');
   }
 
   // ✅ VALIDACIÓN: Verificar que la respuesta tenga la estructura esperada
-  if (!result?.response?.candidates?.[0]?.content?.parts?.[0]?.text) {
-    logger.error('Respuesta de Gemini con estructura inesperada', { result });
+  if (!responseJson?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    logger.error('Respuesta de Gemini con estructura inesperada', { responseJson });
     throw new Error('Respuesta inválida de la IA');
   }
 
-  const textResponse = result.response.candidates[0].content.parts[0].text;
+  const textResponse = responseJson.candidates[0].content.parts[0].text;
 
   logger.info("Respuesta recibida de Gemini", { response: textResponse });
-  
-  // ✅ VALIDACIÓN: Verificar que la respuesta sea un número válido
-  const trimmedResponse = textResponse.trim();
-  const parsedNumber = parseFloat(trimmedResponse);
+
+  // Por si el modelo envuelve el JSON en un bloque de código markdown
+  // (```json ... ```) a pesar de pedir responseMimeType: application/json.
+  const cleanedResponse = textResponse
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(cleanedResponse);
+  } catch (error) {
+    logger.error('Gemini devolvió un JSON inválido', { response: textResponse });
+    throw new ValidationError(
+      'La IA no devolvió una respuesta válida',
+      'aiResponse',
+      'INVALID_AI_RESPONSE'
+    );
+  }
+
+  // ✅ VALIDACIÓN: el monto es obligatorio
+  const parsedNumber = parseFloat(parsed.total);
 
   if (isNaN(parsedNumber)) {
-    logger.warn('Gemini devolvió un valor no numérico', { response: trimmedResponse });
+    logger.warn('Gemini devolvió un monto no numérico', { response: parsed.total });
     throw new ValidationError(
       'La IA no pudo extraer un monto válido de la imagen',
       'aiResponse',
@@ -271,7 +330,6 @@ async function analyzeImageWithGemini(gcsUri, submissionType) {
     );
   }
 
-  // ✅ VALIDACIÓN: Verificar que el número esté en un rango razonable
   if (parsedNumber < 0) {
     throw new ValidationError(
       'El monto extraído no puede ser negativo',
@@ -287,8 +345,26 @@ async function analyzeImageWithGemini(gcsUri, submissionType) {
       'AMOUNT_TOO_LARGE'
     );
   }
-  
-  return trimmedResponse;
+
+  // ✅ VALIDACIÓN: la fecha es opcional — si no es válida o es absurda,
+  // simplemente la descartamos (null) en vez de fallar toda la solicitud;
+  // el usuario puede capturarla/corregirla a mano en el paso de confirmación.
+  let extractedDate = null;
+  if (typeof parsed.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+    const candidate = new Date(`${parsed.date}T12:00:00Z`);
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (!isNaN(candidate.getTime()) && candidate >= twoYearsAgo && candidate <= tomorrow) {
+      extractedDate = parsed.date;
+    } else {
+      logger.warn('Gemini devolvió una fecha fuera de rango razonable', { response: parsed.date });
+    }
+  }
+
+  return { total: String(parsedNumber), date: extractedDate };
 }
 
 function setCorsHeaders(res) {
@@ -388,11 +464,22 @@ functions.http("getTotalAmount", async (req, res) => {
       validateHeaders(req.headers);
     }
 
-    // ✅ VALIDACIÓN 3: Rate limiting
-    const clientIp = req.ip || req.connection.remoteAddress;
-    checkRateLimit(clientIp, 'getTotalAmount');
+    // ✅ VALIDACIÓN 3: Identidad (token de Firebase, acepta invitados anónimos)
+    // Bloquea llamadas directas a la URL que no pasen por la app (curl/scripts),
+    // sin exigir estar en la whitelist: la demo pública sigue siendo pública.
+    const decodedToken = await verifyAuthHeader(req.headers.authorization);
+    const tier = await resolveUserTier(decodedToken, firestore);
 
-    // ✅ VALIDACIÓN 4: Body y parámetros
+    logger.info('Identidad verificada', {
+      requestId,
+      uid: decodedToken.uid,
+      tier,
+    });
+
+    // ✅ VALIDACIÓN 4: Rate limiting por usuario, con límites según su tier
+    checkRateLimit(`${decodedToken.uid}-getTotalAmount`, tier);
+
+    // ✅ VALIDACIÓN 5: Body y parámetros
     const { firestorePath, submissionType } = validateGetTotalAmountRequest(req.body);
 
     logger.info('Solicitud validada exitosamente', {
@@ -412,18 +499,20 @@ functions.http("getTotalAmount", async (req, res) => {
     });
 
     // Analizar imagen con Gemini
-    const total = await analyzeImageWithGemini(gcsUri, submissionType);
+    const { total, date } = await analyzeImageWithGemini(gcsUri, submissionType);
 
     const duration = Date.now() - startTime;
     logger.info('Solicitud completada exitosamente', {
       requestId,
       duration: `${duration}ms`,
       total,
+      date,
     });
 
     // Retornar resultado
     res.status(200).json({
       total,
+      date,
       requestId,
       processingTime: duration,
     });

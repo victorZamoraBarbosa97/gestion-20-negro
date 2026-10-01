@@ -1,5 +1,8 @@
 // src/components/statements/AddStatementModal.jsx
 import React, { useState, useEffect } from "react";
+import ReceiptCapture from "./ReceiptCapture";
+
+const todayAsDateInputValue = () => new Date().toISOString().slice(0, 10);
 
 const AddStatementModal = ({
   isOpen,
@@ -12,6 +15,7 @@ const AddStatementModal = ({
   const [modalStep, setModalStep] = useState("initial"); // 'initial', 'review', 'manual'
   const [monthlyTotal, setMonthlyTotal] = useState(""); // Almacena el monto numérico
   const [displayTotal, setDisplayTotal] = useState(""); // Almacena el monto formateado para mostrar
+  const [date, setDate] = useState(todayAsDateInputValue());
   const [receiptFile, setReceiptFile] = useState(null);
   const [paymentId, setPaymentId] = useState(null); // Guarda el ID del documento entre pasos
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +27,7 @@ const AddStatementModal = ({
       setModalStep("initial");
       setMonthlyTotal("");
       setDisplayTotal("");
+      setDate(todayAsDateInputValue());
       setReceiptFile(null);
       setPaymentId(null);
       setError("");
@@ -66,6 +71,7 @@ const AddStatementModal = ({
         setPaymentId(result.paymentId);
         setMonthlyTotal(result.aiAmount.toString());
         setDisplayTotal(Number(result.aiAmount).toLocaleString("es-MX"));
+        if (result.aiDate) setDate(result.aiDate);
         setModalStep("review");
       } else if (result.paymentId) {
         // FALLO DE LA IA: Pasa al paso de entrada manual
@@ -77,6 +83,7 @@ const AddStatementModal = ({
       await onConfirmPayment({
         paymentId,
         amount: monthlyTotal, // Usa el monto del estado
+        date,
         submissionType: "STATEMENT",
       });
       onClose(); // Cierra el modal al finalizar
@@ -92,14 +99,13 @@ const AddStatementModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md m-4 transition-colors duration-200"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md m-4 max-h-[90vh] overflow-y-auto transition-colors duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
           <div className="p-6 border-b border-slate-100 dark:border-gray-700">
             <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-              Estado de Cuenta de{" "}
-              {defaultType === "VIA" ? "VIA" : "Pronósticos"}
+              Estado de Cuenta de Pronósticos
             </h3>
             <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
               {modalStep === "initial" &&
@@ -137,20 +143,30 @@ const AddStatementModal = ({
                 </div>
               </div>
             )}
-            {modalStep === "initial" && (
+            {(modalStep === "review" || modalStep === "manual") && (
               <div>
                 <label
-                  htmlFor="statement-file"
+                  htmlFor="statement-date"
                   className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1"
                 >
-                  Archivo del Estado de Cuenta
+                  Fecha del estado de cuenta
                 </label>
                 <input
-                  type="file"
-                  id="statement-file"
-                  onChange={(e) => setReceiptFile(e.target.files[0])}
-                  className="w-full text-sm text-slate-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 dark:file:bg-gray-700 file:text-slate-700 dark:file:text-gray-200 hover:file:bg-slate-100 dark:hover:file:bg-gray-600"
+                  type="date"
+                  id="statement-date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  max={todayAsDateInputValue()}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 [color-scheme:light] dark:[color-scheme:dark]"
                   required
+                />
+              </div>
+            )}
+            {modalStep === "initial" && (
+              <div>
+                <ReceiptCapture
+                  onFileReady={setReceiptFile}
+                  label="Archivo del Estado de Cuenta"
                 />
               </div>
             )}

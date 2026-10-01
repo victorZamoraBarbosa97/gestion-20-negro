@@ -6,9 +6,7 @@ import { differenceInDays, startOfWeek } from "date-fns";
 const useNotifications = ({
   payments,
   pronosticosStatement,
-  viaStatement,
   pronosticosTotal,
-  viaTotal,
   currentWeekStartDate,
 }) => {
   const [notifications, setNotifications] = useState([]);
@@ -63,14 +61,7 @@ const useNotifications = ({
     }
 
     setNotifications(alerts);
-  }, [
-    payments,
-    pronosticosStatement,
-    viaStatement,
-    pronosticosTotal,
-    viaTotal,
-    currentWeekStartDate,
-  ]);
+  }, [payments, pronosticosStatement, pronosticosTotal, currentWeekStartDate]);
 
   const stats = useMemo(() => {
     const criticalCount = notifications.filter(

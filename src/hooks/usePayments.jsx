@@ -8,9 +8,9 @@ import {
   deletePayment,
   downloadReceipt as serviceDownloadReceipt,
   updatePaymentDate as serviceUpdatePaymentDate,
-  getAITotal,
   updatePaymentData,
 } from "../services/firestoreService";
+import { getTotalAmount } from "../services/cloudFunctions";
 import { AuthContext } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
@@ -51,19 +51,9 @@ const usePayments = (startDate, endDate) => {
     [payments]
   );
 
-  const viaPayments = useMemo(
-    () => payments.filter((p) => p.type === "VIA" && p.amount > 0),
-    [payments]
-  );
-
   const pronosticosTotal = useMemo(
     () => pronosticosPayments.reduce((sum, mov) => sum + mov.amount, 0),
     [pronosticosPayments]
-  );
-
-  const viaTotal = useMemo(
-    () => viaPayments.reduce((sum, mov) => sum + mov.amount, 0),
-    [viaPayments]
   );
 
   const pronosticosStatement = useMemo(
@@ -72,13 +62,7 @@ const usePayments = (startDate, endDate) => {
     [payments]
   );
 
-  const viaStatement = useMemo(
-    () => payments.find((p) => p.type === "VIA" && p.amount === 0) || null,
-    [payments]
-  );
-
   const hasPronosticosStatement = !!pronosticosStatement;
-  const hasViaStatement = !!viaStatement;
 
   // ✅ OPTIMIZACIÓN 1: useCallback para handleInitialUpload
   // ANTES: Se recreaba en cada render del hook
@@ -108,16 +92,21 @@ const usePayments = (startDate, endDate) => {
 
         // Luego, llama a la IA para que analice el archivo
         toast.loading("Analizando con IA...", { id: toastId });
-        const aiTotalString = await getAITotal({
-          firestorePath: `payments/${id}`,
+        const aiResult = await getTotalAmount(
+          `payments/${id}`,
           submissionType,
-        });
+        );
 
         toast.dismiss(toastId);
 
-        if (aiTotalString) {
-          const aiAmountNumber = parseFloat(aiTotalString);
-          return { success: true, aiAmount: aiAmountNumber, paymentId: id };
+        if (aiResult) {
+          const aiAmountNumber = parseFloat(aiResult.total);
+          return {
+            success: true,
+            aiAmount: aiAmountNumber,
+            aiDate: aiResult.date,
+            paymentId: id,
+          };
         } else {
           toast.error(
             "La IA no pudo leer el monto. Por favor, ingrésalo manualmente."
@@ -135,7 +124,7 @@ const usePayments = (startDate, endDate) => {
 
   // ✅ OPTIMIZACIÓN 2: useCallback para handleConfirmPayment
   const handleConfirmPayment = useCallback(
-    async ({ paymentId, amount, submissionType }) => {
+    async ({ paymentId, amount, date, submissionType }) => {
       if (
         !paymentId ||
         amount === undefined ||
@@ -150,6 +139,12 @@ const usePayments = (startDate, endDate) => {
         submissionType === "STATEMENT"
           ? { monthlyTotal: Number(amount) }
           : { amount: Number(amount) };
+
+      if (date) {
+        // Mediodía para evitar que la zona horaria local recorra el día
+        // al convertir el string "YYYY-MM-DD" a Date.
+        dataToUpdate.date = new Date(`${date}T12:00:00`);
+      }
 
       await toast.promise(updatePaymentData(paymentId, dataToUpdate), {
         loading: "Guardando monto final...",
@@ -201,19 +196,15 @@ const usePayments = (startDate, endDate) => {
   return {
     isLoading,
     pronosticosPayments,
-    viaPayments,
     pronosticosTotal,
-    viaTotal,
     handleInitialUpload,
     handleConfirmPayment,
     handleDeletePayment,
     handleDownloadReceipt,
     handleUpdatePaymentDate,
     hasPronosticosStatement,
-    hasViaStatement,
     refetchPayments: fetchData,
     pronosticosStatement,
-    viaStatement,
     payments,
   };
 };

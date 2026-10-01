@@ -156,6 +156,42 @@ export const SunIcon = (props) => (
   </svg>
 );
 
+export const CameraIcon = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    {...props}
+  >
+    <rect
+      x="2.5"
+      y="7"
+      width="19"
+      height="13"
+      rx="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7L9.5 4.5H14.5L16 7" />
+    <circle cx="12" cy="13.5" r="3.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const FolderIcon = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    {...props}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 6H9L11 8H21V18H3Z" />
+  </svg>
+);
+
 export const MoonIcon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"

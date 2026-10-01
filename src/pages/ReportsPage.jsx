@@ -8,9 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,7 +22,6 @@ const ReportsPage = () => {
   // Definición de colores dinámica basada en el tema
   const chartColors = {
     PRONÓSTICOS: theme === "dark" ? "#fb923c" : "#ea580c", // Orange 400 (Dark) vs 600 (Light)
-    VÍA: theme === "dark" ? "#60a5fa" : "#2563eb", // Blue 400 (Dark) vs 600 (Light)
   };
 
   // Estilos para ejes y rejillas
@@ -98,98 +94,38 @@ const ReportsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Gráfico de Barras */}
-          <div className="lg:col-span-2 bg-white dark:bg-dark-surface p-6 rounded-lg shadow-lg overflow-x-auto transition-colors border border-gray-100 dark:border-dark-border">
-            <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
-              Pagos por Semana
-            </h2>
-            <div style={{ width: "100%", height: 400, minWidth: "300px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData.weekly}
-                  margin={{ top: 20, right: 10, left: 10, bottom: 5 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={chartStyles.grid}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke={chartStyles.axis}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    stroke={chartStyles.axis}
-                    tickFormatter={(value) => `$${value.toLocaleString()}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: chartStyles.tooltipBg,
-                      borderColor: chartStyles.tooltipBorder,
-                      color: chartStyles.tooltipText,
-                    }}
-                    labelStyle={{ color: chartStyles.tooltipText }}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="PRONÓSTICOS"
-                    fill={chartColors["PRONÓSTICOS"]}
-                  />
-                  <Bar dataKey="VÍA" fill={chartColors["VÍA"]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Gráfico de Pastel */}
-          <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-lg overflow-x-auto transition-colors border border-gray-100 dark:border-dark-border">
-            <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
-              Distribución Total
-            </h2>
-            <div style={{ width: "100%", height: 400 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData.pie}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={150}
-                    dataKey="value"
-                  >
-                    {chartData.pie.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={chartColors[entry.name]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: chartStyles.tooltipBg,
-                      borderColor: chartStyles.tooltipBorder,
-                      color: chartStyles.tooltipText,
-                    }}
-                    itemStyle={{ color: chartStyles.tooltipText }}
-                    formatter={(value) =>
-                      value.toLocaleString("es-MX", {
-                        style: "currency",
-                        currency: "MXN",
-                      })
-                    }
-                  />
-                  <Legend
-                    wrapperStyle={{ paddingTop: "20px" }}
-                    payload={chartData.pie.map((entry) => ({
-                      value: entry.name,
-                      type: "square",
-                      color: chartColors[entry.name],
-                    }))}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+        <div className="bg-white dark:bg-dark-surface p-6 rounded-lg shadow-lg overflow-x-auto transition-colors border border-gray-100 dark:border-dark-border">
+          <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
+            Pagos por Semana
+          </h2>
+          <div style={{ width: "100%", height: 400, minWidth: "300px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData.weekly}
+                margin={{ top: 20, right: 10, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={chartStyles.grid} />
+                <XAxis
+                  dataKey="name"
+                  stroke={chartStyles.axis}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  stroke={chartStyles.axis}
+                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: chartStyles.tooltipBg,
+                    borderColor: chartStyles.tooltipBorder,
+                    color: chartStyles.tooltipText,
+                  }}
+                  labelStyle={{ color: chartStyles.tooltipText }}
+                />
+                <Legend />
+                <Bar dataKey="PRONÓSTICOS" fill={chartColors["PRONÓSTICOS"]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </main>

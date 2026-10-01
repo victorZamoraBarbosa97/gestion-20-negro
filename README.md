@@ -4,7 +4,7 @@
 
 [![Live Preview](https://img.shields.io/badge/Live_Preview-Ver_Demo-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://gestion-20.firebaseapp.com/)
 
-**Gestión 20 Negro** es una aplicación web interna y segura diseñada para el seguimiento y control de pagos semanales. Construida con React y Firebase, ofrece una solución robusta y en tiempo real para la gestión financiera de dos categorías de pagos: "PRONÓSTICOS" y "VÍA".
+**Gestión 20 Negro** es una aplicación web interna y segura diseñada para el seguimiento y control de pagos semanales. Construida con React y Firebase, ofrece una solución robusta y en tiempo real para la gestión financiera de los pagos de "PRONÓSTICOS".
 
 La aplicación permite a los usuarios autorizados añadir, visualizar y gestionar pagos. Cada pago está asociado a un comprobante (imagen) que se almacena de forma segura. La interfaz es intuitiva y proporciona un resumen claro de los totales semanales.
 
@@ -12,7 +12,7 @@ La aplicación permite a los usuarios autorizados añadir, visualizar y gestiona
 
 - **Autenticación Segura:** Inicio de sesión mediante cuentas de Google autorizadas o como invitado (solo lectura). Solo los usuarios en una lista blanca (`allowlist`) pueden acceder y modificar datos.
 - **Gestión de Pagos en Tiempo Real:** Los pagos se actualizan instantáneamente para todos los usuarios gracias a Firestore.
-- **Clasificación por Categorías:** Los pagos se dividen en "PRONÓSTICOS" y "VÍA", con totales calculados automáticamente.
+- **Totales Automáticos:** El total semanal de pagos de "PRONÓSTICOS" se calcula automáticamente.
 - **Navegación Semanal:** Permite moverse fácilmente entre semanas para revisar pagos pasados o futuros.
 - **Carga y Descarga de Comprobantes:** Cada pago puede tener un comprobante (imagen) asociado, que se puede cargar y descargar de forma segura desde Firebase Storage.
 - **Gestión de Fechas:** Permite modificar la fecha de un pago existente, moviéndolo a la semana correspondiente.

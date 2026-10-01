@@ -11,13 +11,9 @@ const DashboardPage = () => {
     notifications,
     isLoading,
     pronosticosPayments,
-    viaPayments,
     pronosticosTotal,
-    viaTotal,
     pronosticosStatement,
-    viaStatement,
     hasPronosticosStatement,
-    hasViaStatement,
     modalsState,
     businessActions,
     uiHandlers,
@@ -36,7 +32,7 @@ const DashboardPage = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
+        <div className="max-w-2xl mx-auto w-full">
           {/* --- SECCIÓN PRONÓSTICOS --- */}
           <PaymentSection
             title="PRONÓSTICOS"
@@ -50,25 +46,7 @@ const DashboardPage = () => {
             onAddPayment={uiHandlers.openPronosticosAdd}
             onViewStatement={uiHandlers.viewPronosticosStatement}
             onAddStatement={uiHandlers.openPronosticosStatementAdd}
-            type="PRONOSTICOS"
             colorTheme="orange"
-          />
-
-          {/* --- SECCIÓN VIA --- */}
-          <PaymentSection
-            title="BIMBONET"
-            subtitle="ESTADO DE CUENTA"
-            totalAmount={viaTotal}
-            statementAmount={viaStatement?.monthlyTotal}
-            hasStatement={hasViaStatement}
-            payments={viaPayments}
-            isLoading={isLoading}
-            onPaymentClick={uiHandlers.setSelectedPayment}
-            onAddPayment={uiHandlers.openViaAdd}
-            onViewStatement={uiHandlers.viewViaStatement}
-            onAddStatement={uiHandlers.openViaStatementAdd}
-            type="VIA"
-            colorTheme="blue"
           />
         </div>
       </main>
