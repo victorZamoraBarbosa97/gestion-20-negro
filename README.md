@@ -3,6 +3,7 @@
 ![Logo de la Aplicación](public/logo.svg)
 
 [![Live Preview](https://img.shields.io/badge/Live_Preview-Ver_Demo-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://gestion-20.firebaseapp.com/)
+<img width="1920" height="945" alt="chrome_vv6rddWibp" src="https://github.com/user-attachments/assets/dcb31695-02d9-4e6e-b793-124e73191e3a" />
 
 **Gestión 20 Negro** es una aplicación web interna y segura diseñada para el seguimiento y control de pagos semanales. Construida con React y Firebase, ofrece una solución robusta y en tiempo real para la gestión financiera de los pagos de "PRONÓSTICOS".
 
