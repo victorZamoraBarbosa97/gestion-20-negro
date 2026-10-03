@@ -80,17 +80,32 @@ const usePayments = (startDate, endDate) => {
 
       const toastId = toast.loading("Subiendo archivo...");
 
+      // Primero, crea el documento en Firestore con un monto temporal de 0.
+      // Si esto falla (ej. permisos de invitado), dejamos que el error suba
+      // tal cual — el wrapper que llama a este hook (safeHandleInitialUpload)
+      // ya sabe traducir errores de permisos al mensaje correcto; si lo
+      // atrapáramos aquí con un mensaje genérico, ese mensaje real nunca se
+      // vería.
+      let id;
       try {
-        // Primero, crea el documento en Firestore con un monto temporal de 0
-        const { id } = await addPayment({
+        const created = await addPayment({
           amount: 0,
           receiptFile,
           creatorUid: currentUser.uid,
           type,
           submissionType,
         });
+        id = created.id;
+      } catch (err) {
+        toast.dismiss(toastId);
+        throw err;
+      }
 
-        // Luego, llama a la IA para que analice el archivo
+      // A partir de aquí el comprobante ya se subió con éxito — un fallo de
+      // la IA es un problema distinto (no de permisos), así que se maneja
+      // aparte y siempre se conserva el paymentId para poder capturar el
+      // monto/fecha a mano.
+      try {
         toast.loading("Analizando con IA...", { id: toastId });
         const aiResult = await getTotalAmount(
           `payments/${id}`,
@@ -98,25 +113,20 @@ const usePayments = (startDate, endDate) => {
         );
 
         toast.dismiss(toastId);
-
-        if (aiResult) {
-          const aiAmountNumber = parseFloat(aiResult.total);
-          return {
-            success: true,
-            aiAmount: aiAmountNumber,
-            aiDate: aiResult.date,
-            paymentId: id,
-          };
-        } else {
-          toast.error(
-            "La IA no pudo leer el monto. Por favor, ingrésalo manualmente."
-          );
-          return { success: false, paymentId: id };
-        }
+        const aiAmountNumber = parseFloat(aiResult.total);
+        return {
+          success: true,
+          aiAmount: aiAmountNumber,
+          aiDate: aiResult.date,
+          paymentId: id,
+        };
       } catch (err) {
-        toast.error("Ocurrió un error en el proceso.");
-        console.error("Error en el flujo de IA:", err);
-        return { success: false, error: err.message };
+        toast.dismiss(toastId);
+        toast.error(
+          "La IA no pudo analizar la imagen. Ingresa los datos manualmente.",
+        );
+        console.error("Error en el análisis de IA:", err);
+        return { success: false, paymentId: id };
       }
     },
     [currentUser] // Solo depende de currentUser

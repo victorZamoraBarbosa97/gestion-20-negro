@@ -15,6 +15,7 @@ const PaymentSection = ({
   onViewStatement,
   onAddStatement,
   colorTheme = "orange",
+  isGuest = false,
 }) => {
   // Definición de colores dinámicos basados en el tema
   const colors = {
@@ -57,14 +58,32 @@ const PaymentSection = ({
             ) : (
               <button
                 onClick={onAddStatement}
-                className="px-3 py-2 text-sm font-semibold text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-slate-300 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
+                title={
+                  isGuest
+                    ? "Modo invitado: solo puedes consultar, no agregar."
+                    : undefined
+                }
+                className={`px-3 py-2 text-sm font-semibold rounded-lg shadow-sm border transition-colors ${
+                  isGuest
+                    ? "text-slate-400 dark:text-gray-500 bg-slate-100 dark:bg-gray-800/50 border-slate-200 dark:border-gray-700 cursor-not-allowed"
+                    : "text-slate-700 dark:text-gray-200 bg-white dark:bg-gray-800 border-slate-300 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-700"
+                }`}
               >
                 Agregar Estado de Cuenta
               </button>
             )}
             <button
               onClick={onAddPayment}
-              className={`flex items-center px-3 py-2 text-white font-semibold rounded-lg shadow-md ${colors.button}`}
+              title={
+                isGuest
+                  ? "Modo invitado: solo puedes consultar, no agregar."
+                  : undefined
+              }
+              className={`flex items-center px-3 py-2 font-semibold rounded-lg shadow-md transition-colors ${
+                isGuest
+                  ? "text-slate-500 dark:text-gray-400 bg-slate-200 dark:bg-gray-700 cursor-not-allowed"
+                  : `text-white ${colors.button}`
+              }`}
             >
               Agregar Pago
             </button>

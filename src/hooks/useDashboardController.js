@@ -199,6 +199,20 @@ const useDashboardController = () => {
     [currentUser, handleDownloadReceipt],
   );
 
+  const GUEST_READ_ONLY_MESSAGE =
+    "🔒 Modo invitado: solo puedes consultar los datos, no agregar pagos.";
+
+  const guardGuestAction = useCallback(
+    (action) => {
+      if (currentUser?.isAnonymous) {
+        toast.error(GUEST_READ_ONLY_MESSAGE, { icon: "🚫", duration: 4000 });
+        return;
+      }
+      action();
+    },
+    [currentUser],
+  );
+
   // --- RETURN API ---
   return {
     // Estado Global
@@ -211,6 +225,7 @@ const useDashboardController = () => {
     pronosticosTotal,
     pronosticosStatement,
     hasPronosticosStatement,
+    isGuest: !!currentUser?.isAnonymous,
 
     // Estado Modales
     modalsState: {
@@ -244,9 +259,10 @@ const useDashboardController = () => {
       setSelectedPayment,
 
       // Helpers específicos pre-configurados
-      openPronosticosAdd: () => handleOpenAddModal("PRONOSTICOS"),
+      openPronosticosAdd: () =>
+        guardGuestAction(() => handleOpenAddModal("PRONOSTICOS")),
       openPronosticosStatementAdd: () =>
-        handleOpenStatementModal("PRONOSTICOS"),
+        guardGuestAction(() => handleOpenStatementModal("PRONOSTICOS")),
       viewPronosticosStatement: () =>
         handleViewStatementClick(pronosticosStatement),
     },

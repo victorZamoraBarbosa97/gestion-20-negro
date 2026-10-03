@@ -14,6 +14,7 @@ const DashboardPage = () => {
     pronosticosTotal,
     pronosticosStatement,
     hasPronosticosStatement,
+    isGuest,
     modalsState,
     businessActions,
     uiHandlers,
@@ -47,6 +48,7 @@ const DashboardPage = () => {
             onViewStatement={uiHandlers.viewPronosticosStatement}
             onAddStatement={uiHandlers.openPronosticosStatementAdd}
             colorTheme="orange"
+            isGuest={isGuest}
           />
         </div>
       </main>
