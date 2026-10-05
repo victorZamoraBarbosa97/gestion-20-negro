@@ -62,6 +62,11 @@ export const getPaymentsForDateRange = (startDate, endDate, callback) => {
  * @param {File} paymentData.receiptFile - Archivo del comprobante.
  * @param {string} paymentData.creatorUid - UID del usuario que crea el pago.
  * @param {string} paymentData.type - Tipo de pago ('PRONOSTICOS').
+ * @param {'PAYMENT'|'STATEMENT'} paymentData.submissionType - Si es un pago
+ *   individual o un estado de cuenta. Se guarda explícitamente para no tener
+ *   que adivinar por `amount === 0` (eso se presta a confusión si un pago
+ *   queda a medias con monto 0, ej. por un fallo de la IA sin completar la
+ *   captura manual).
  * @param {number|null} [paymentData.monthlyTotal=null] - Monto total calculado por la IA.
  * @returns {Promise<{id: string, storagePath: string, mimeType: string}>} - Información del pago.
  */
@@ -70,9 +75,10 @@ export const addPayment = async ({
   receiptFile,
   creatorUid,
   type,
+  submissionType,
   monthlyTotal = null,
 }) => {
-  if (!receiptFile || !creatorUid || !type) {
+  if (!receiptFile || !creatorUid || !type || !submissionType) {
     throw new Error("Faltan datos para añadir el pago.");
   }
 
@@ -93,6 +99,7 @@ export const addPayment = async ({
     storagePath: filePath,
     creatorUid,
     type,
+    submissionType,
     monthlyTotal: monthlyTotal,
   };
 

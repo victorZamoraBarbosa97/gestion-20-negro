@@ -45,9 +45,15 @@ const usePayments = (startDate, endDate) => {
     return () => unsubscribe();
   }, [fetchData]);
 
-  // ✅ Ya estaban optimizados - perfecto
+  // Documentos viejos (antes de guardar `submissionType`) siguen
+  // distinguiéndose por `amount === 0`; los nuevos ya no dependen de eso.
+  const isStatementDoc = (p) =>
+    p.submissionType ? p.submissionType === "STATEMENT" : p.amount === 0;
+  const isPaymentDoc = (p) =>
+    p.submissionType ? p.submissionType === "PAYMENT" : p.amount > 0;
+
   const pronosticosPayments = useMemo(
-    () => payments.filter((p) => p.type === "PRONOSTICOS" && p.amount > 0),
+    () => payments.filter((p) => p.type === "PRONOSTICOS" && isPaymentDoc(p)),
     [payments]
   );
 
@@ -58,7 +64,8 @@ const usePayments = (startDate, endDate) => {
 
   const pronosticosStatement = useMemo(
     () =>
-      payments.find((p) => p.type === "PRONOSTICOS" && p.amount === 0) || null,
+      payments.find((p) => p.type === "PRONOSTICOS" && isStatementDoc(p)) ||
+      null,
     [payments]
   );
 
